@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 fail(){ echo "ERRO: $1"; exit 1; }
-grep -q 'versionName = "1.0.0-alpha06"' app/build.gradle.kts || fail "versionName Alpha 06 incorreto"
-grep -q 'versionCode = 26' app/build.gradle.kts || fail "versionCode Alpha 06 incorreto"
+grep -q 'versionName = "1.0.0-alpha07"' app/build.gradle.kts || fail "versionName Alpha 07 incorreto"
+grep -q 'versionCode = 27' app/build.gradle.kts || fail "versionCode Alpha 07 incorreto"
 grep -q 'applicationId = "com.danielslima.testeappinicial"' app/build.gradle.kts || fail "applicationId mudou"
 for file in app/src/main/res/layout/dialog_vira_budget_manager.xml app/src/main/res/layout/dialog_vira_budget_editor.xml app/src/main/res/drawable/vira_checkbox.xml app/src/main/res/drawable/vira_dialog_surface.xml; do test -f "$file" || fail "arquivo $file ausente"; done
-grep -q 'android:button="@drawable/vira_checkbox"' app/src/main/res/layout/activity_main.xml || fail "checkbox Vira não aplicado"
+grep -q 'android:button="@drawable/vira_toggle"' app/src/main/res/layout/activity_main.xml || fail "toggle Vira não aplicado"
 grep -q 'budgetCategoriesContainer' app/src/main/res/layout/dialog_vira_budget_manager.xml || fail "gerenciador de orçamento incompleto"
 grep -q 'budgetValueInput' app/src/main/res/layout/dialog_vira_budget_editor.xml || fail "editor de orçamento incompleto"
 if grep -n 'setItems(itens)' app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt; then fail "orçamento ainda usa lista nativa"; fi
@@ -45,4 +45,17 @@ grep -q 'mostrarFeedbackVira' app/src/main/java/com/danielslima/testeappinicial/
 for texto in 'Fixo atualizado para as próximas projeções' 'Fixo desativado. Histórico mantido e projeções futuras removidas.' 'Backup do Vira criado com sucesso' 'Backup restaurado com sucesso'; do
   if grep -q "$texto" app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt; then fail "toast de sucesso antigo ainda presente: $texto"; fi
 done
-echo "Vira Alpha 06: feedback próprio e polimento de sucesso validados"
+for id in settingsFinanceCard settingsSecurityCard settingsDataCard settingsAboutCard; do
+  grep -q "android:id=\"@+id/$id\"" app/src/main/res/layout/activity_main.xml || fail "Ajustes Alpha 07 sem $id"
+done
+for file in app/src/main/res/drawable/vira_toggle.xml app/src/main/res/drawable/vira_toggle_on.xml app/src/main/res/drawable/vira_toggle_off.xml; do
+  test -f "$file" || fail "toggle Alpha 07 incompleto: $file"
+done
+for id in exportCsvButton backupButton restoreBackupButton; do
+  if grep -q "findViewById<Button>(R.id.$id)" app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt; then fail "$id ainda depende de Button"
+  fi
+done
+grep -q 'Toque em + Novo' app/src/main/res/values/strings.xml || fail "estado vazio de Movimentações ainda não orienta próximo passo"
+grep -q 'android:contentDescription="@string/nav_settings"' app/src/main/res/layout/activity_main.xml || fail "navegação inferior sem descrição acessível"
+grep -q 'settings_version_alpha07' app/src/main/res/layout/activity_main.xml || fail "card Sobre não mostra Alpha 07"
+echo "Vira Alpha 07: Ajustes, acessibilidade e estados vazios validados"

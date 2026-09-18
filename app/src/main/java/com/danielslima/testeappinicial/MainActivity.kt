@@ -289,15 +289,15 @@ class MainActivity : Activity() {
             abrirGerenciadorOrcamentos()
         }
 
-        findViewById<Button>(R.id.exportCsvButton).setOnClickListener {
+        findViewById<View>(R.id.exportCsvButton).setOnClickListener {
             iniciarExportacaoCsv()
         }
 
-        findViewById<Button>(R.id.backupButton).setOnClickListener {
+        findViewById<View>(R.id.backupButton).setOnClickListener {
             iniciarExportacaoBackup()
         }
 
-        findViewById<Button>(R.id.restoreBackupButton).setOnClickListener {
+        findViewById<View>(R.id.restoreBackupButton).setOnClickListener {
             iniciarImportacaoBackup()
         }
 

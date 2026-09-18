@@ -705,10 +705,13 @@
                         android:layout_height="wrap_content"
                         android:background="@drawable/vira_card_surface"
                         android:gravity="center"
+                        android:lineSpacingExtra="4dp"
+                        android:minHeight="132dp"
                         android:padding="28dp"
                         android:text="@string/empty_state_month"
+                        android:textAlignment="center"
                         android:textColor="@color/text_secondary"
-                        android:textSize="15sp" />
+                        android:textSize="14sp" />
 
                     <LinearLayout
                         android:id="@+id/movementsContainer"
@@ -1165,78 +1168,253 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:paddingStart="18dp"
-                android:paddingTop="22dp"
+                android:paddingTop="20dp"
                 android:paddingEnd="18dp"
-                android:paddingBottom="30dp">
-
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/settings_title" android:textColor="@color/text_primary" android:textSize="28sp" android:textStyle="bold" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="@string/settings_subtitle" android:textColor="@color/text_secondary" android:textSize="12sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:text="@string/settings_behavior"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-                <CheckBox
-                    android:id="@+id/carryBalanceCheckBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="58dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/vira_card_surface"
-                    android:button="@drawable/vira_checkbox"
-                    android:gravity="center_vertical"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:text="@string/carry_balance"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
-
-                <CheckBox
-                    android:id="@+id/securityCheckBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="58dp"
-                    android:layout_marginTop="10dp"
-                    android:background="@drawable/vira_card_surface"
-                    android:button="@drawable/vira_checkbox"
-                    android:gravity="center_vertical"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:text="@string/protect_app"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
+                android:paddingBottom="32dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/vira_card_surface"
+                        android:contentDescription="@string/app_name"
+                        android:padding="7dp"
+                        android:src="@drawable/ic_vira_mark" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_title"
+                            android:textColor="@color/text_primary"
+                            android:textSize="28sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="@string/settings_subtitle"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:text="@string/settings_behavior"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:id="@+id/settingsFinanceCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:background="@drawable/vira_card_surface"
-                    android:orientation="vertical"
+                    android:gravity="center_vertical"
+                    android:minHeight="76dp"
+                    android:orientation="horizontal"
                     android:paddingStart="14dp"
-                    android:paddingTop="4dp"
-                    android:paddingEnd="14dp"
+                    android:paddingTop="10dp"
+                    android:paddingEnd="12dp"
                     android:paddingBottom="10dp">
 
-                    <CheckBox
-                        android:id="@+id/notificationCheckBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="54dp"
-                        android:button="@drawable/vira_checkbox"
-                        android:gravity="center_vertical"
-                        android:text="@string/reminder_notifications"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp" />
-
                     <TextView
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="@drawable/vira_status_chip"
+                        android:gravity="center"
+                        android:importantForAccessibility="no"
+                        android:text="↗"
+                        android:textColor="@color/brand_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/carry_balance"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="@string/settings_carry_balance_hint"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <CheckBox
+                        android:id="@+id/carryBalanceCheckBox"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="8dp"
+                        android:button="@drawable/vira_toggle"
+                        android:buttonTint="@null"
+                        android:contentDescription="@string/carry_balance"
+                        android:gravity="center" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:text="@string/settings_security_reminders"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:id="@+id/settingsSecurityCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/vira_card_surface"
+                    android:orientation="vertical">
+
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingStart="36dp"
-                        android:text="@string/reminder_notifications_hint"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp" />
+                        android:gravity="center_vertical"
+                        android:minHeight="76dp"
+                        android:orientation="horizontal"
+                        android:paddingStart="14dp"
+                        android:paddingTop="10dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="10dp">
+
+                        <TextView
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/vira_status_chip"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:text="◆"
+                            android:textColor="@color/brand_primary"
+                            android:textSize="15sp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/protect_app"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:text="@string/settings_protect_hint"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <CheckBox
+                            android:id="@+id/securityCheckBox"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="8dp"
+                            android:button="@drawable/vira_toggle"
+                            android:buttonTint="@null"
+                            android:contentDescription="@string/protect_app"
+                            android:gravity="center" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="62dp"
+                        android:background="@color/border" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:minHeight="82dp"
+                        android:orientation="horizontal"
+                        android:paddingStart="14dp"
+                        android:paddingTop="10dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="10dp">
+
+                        <TextView
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/vira_status_chip"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:text="◷"
+                            android:textColor="@color/brand_primary"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/reminder_notifications"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:text="@string/reminder_notifications_hint"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <CheckBox
+                            android:id="@+id/notificationCheckBox"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="8dp"
+                            android:button="@drawable/vira_toggle"
+                            android:buttonTint="@null"
+                            android:contentDescription="@string/reminder_notifications"
+                            android:gravity="center" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <TextView
@@ -1245,67 +1423,276 @@
                     android:layout_marginTop="22dp"
                     android:text="@string/settings_data"
                     android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-                <Button
-                    android:id="@+id/exportCsvButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="18dp"
-                    android:background="@drawable/vira_button_secondary"
-                    android:text="@string/export_csv"
-                    android:textAllCaps="false"
-                    android:textColor="@color/text_primary"
+                    android:textSize="11sp"
                     android:textStyle="bold" />
 
                 <LinearLayout
+                    android:id="@+id/settingsDataCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal">
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/vira_card_surface"
+                    android:orientation="vertical">
 
-                    <Button
+                    <LinearLayout
+                        android:id="@+id/exportCsvButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="true"
+                        android:contentDescription="@string/settings_export_title"
+                        android:focusable="true"
+                        android:foreground="?android:attr/selectableItemBackground"
+                        android:gravity="center_vertical"
+                        android:minHeight="70dp"
+                        android:orientation="horizontal"
+                        android:paddingStart="14dp"
+                        android:paddingTop="10dp"
+                        android:paddingEnd="14dp"
+                        android:paddingBottom="10dp">
+
+                        <TextView
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/vira_status_chip"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:text="CSV"
+                            android:textColor="@color/brand_primary"
+                            android:textSize="9sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_export_title"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:text="@string/settings_export_hint"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="28dp"
+                            android:layout_height="48dp"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:text="›"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="24sp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="62dp"
+                        android:background="@color/border" />
+
+                    <LinearLayout
                         android:id="@+id/backupButton"
-                        android:layout_width="0dp"
-                        android:layout_height="52dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/vira_button_secondary"
-                        android:text="@string/create_backup"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_primary"
-                        android:textStyle="bold" />
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="true"
+                        android:contentDescription="@string/create_backup"
+                        android:focusable="true"
+                        android:foreground="?android:attr/selectableItemBackground"
+                        android:gravity="center_vertical"
+                        android:minHeight="70dp"
+                        android:orientation="horizontal"
+                        android:paddingStart="14dp"
+                        android:paddingTop="10dp"
+                        android:paddingEnd="14dp"
+                        android:paddingBottom="10dp">
 
-                    <Space android:layout_width="10dp" android:layout_height="1dp" />
+                        <TextView
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/vira_status_chip"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:text="⇩"
+                            android:textColor="@color/brand_primary"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
 
-                    <Button
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/create_backup"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:text="@string/settings_backup_hint"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="28dp"
+                            android:layout_height="48dp"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:text="›"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="24sp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="62dp"
+                        android:background="@color/border" />
+
+                    <LinearLayout
                         android:id="@+id/restoreBackupButton"
-                        android:layout_width="0dp"
-                        android:layout_height="52dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/vira_button_secondary"
-                        android:text="@string/restore_backup"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_primary"
-                        android:textStyle="bold" />
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="true"
+                        android:contentDescription="@string/restore_backup"
+                        android:focusable="true"
+                        android:foreground="?android:attr/selectableItemBackground"
+                        android:gravity="center_vertical"
+                        android:minHeight="70dp"
+                        android:orientation="horizontal"
+                        android:paddingStart="14dp"
+                        android:paddingTop="10dp"
+                        android:paddingEnd="14dp"
+                        android:paddingBottom="10dp">
+
+                        <TextView
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/vira_status_chip"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:text="↺"
+                            android:textColor="@color/brand_primary"
+                            android:textSize="19sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/restore_backup"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:text="@string/settings_restore_hint"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="28dp"
+                            android:layout_height="48dp"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:text="›"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="24sp" />
+                    </LinearLayout>
                 </LinearLayout>
 
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:text="@string/settings_about"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
                 <LinearLayout
+                    android:id="@+id/settingsAboutCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:background="@drawable/vira_card_surface"
-                    android:orientation="vertical"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/vira_card_primary"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
                     android:padding="16dp">
 
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/brand_public_name" android:textColor="@color/text_primary" android:textSize="16sp" android:textStyle="bold" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/brand_tagline" android:textColor="@color/text_secondary" android:textSize="12sp" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="1.0.0 Alpha 06" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                    <ImageView
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/vira_card_surface"
+                        android:contentDescription="@string/app_name"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_vira_mark" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/brand_public_name"
+                            android:textColor="@color/white"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="@string/brand_tagline"
+                            android:textColor="#DDEBE5"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/settings_version_alpha07"
+                            android:textColor="#DDEBE5"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </ScrollView>
     </FrameLayout>
-
 
     <TextView
         android:id="@+id/feedbackBanner"
@@ -1342,6 +1729,8 @@
         <LinearLayout
             android:id="@+id/navHome"
             android:layout_width="0dp"
+            android:contentDescription="@string/nav_home"
+            android:importantForAccessibility="yes"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:clickable="true"
@@ -1356,6 +1745,8 @@
         <LinearLayout
             android:id="@+id/navMovements"
             android:layout_width="0dp"
+            android:contentDescription="@string/nav_movements"
+            android:importantForAccessibility="yes"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:clickable="true"
@@ -1370,6 +1761,8 @@
         <LinearLayout
             android:id="@+id/navPlanning"
             android:layout_width="0dp"
+            android:contentDescription="@string/nav_planning"
+            android:importantForAccessibility="yes"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:clickable="true"
@@ -1384,6 +1777,8 @@
         <LinearLayout
             android:id="@+id/navSettings"
             android:layout_width="0dp"
+            android:contentDescription="@string/nav_settings"
+            android:importantForAccessibility="yes"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:clickable="true"

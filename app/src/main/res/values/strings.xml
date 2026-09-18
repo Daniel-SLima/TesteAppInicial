@@ -41,8 +41,8 @@
     <string name="movements">Movimentações</string>
     <string name="search_movements">Buscar movimentação ou categoria…</string>
     <string name="filters">Filtros</string>
-    <string name="empty_state_month">Nenhuma movimentação neste mês.</string>
-    <string name="empty_state_filtered">Nenhuma movimentação encontrada com estes filtros.</string>
+    <string name="empty_state_month">Nenhuma movimentação neste mês.\nToque em + Novo para registrar seu primeiro lançamento.</string>
+    <string name="empty_state_filtered">Nenhuma movimentação encontrada com estes filtros.\nTente limpar ou alterar os filtros.</string>
     <string name="nav_home">Início</string>
     <string name="nav_movements">Movimentações</string>
     <string name="nav_planning">Planejamento</string>
@@ -55,13 +55,13 @@
     <string name="planning_title">Planejamento</string>
     <string name="planning_subtitle">Olhe para frente sem perder o hoje.</string>
     <string name="settings_title">Ajustes</string>
-    <string name="settings_subtitle">Seu Vira, do seu jeito.</string>
+    <string name="settings_subtitle">Deixe o Vira funcionar do seu jeito.</string>
     <string name="monthly_budget">Orçamento do mês</string>
     <string name="manage_recurring_short">Fixos mensais</string>
     <string name="manage_budgets_short">Orçamentos</string>
     <string name="planning_tools">ORGANIZAR</string>
-    <string name="settings_behavior">COMPORTAMENTO E PRIVACIDADE</string>
-    <string name="settings_data">SEUS DADOS</string>
+    <string name="settings_behavior">PREFERÊNCIAS FINANCEIRAS</string>
+    <string name="settings_data">DADOS E BACKUP</string>
     <string name="budget_manager_title">Orçamentos mensais</string>
     <string name="budget_manager_subtitle">Defina quanto pretende gastar por categoria. Toque em uma linha para editar.</string>
     <string name="budget_editor_title">Definir limite</string>
@@ -98,7 +98,7 @@
     <string name="planning_next_months">Próximos meses</string>
     <string name="planning_next_months_hint">Toque em um mês para mudar toda a visão do Vira.</string>
     <string name="planning_commitments">Compromissos do mês</string>
-    <string name="planning_no_commitments">Nenhum pagamento ou recebimento pendente neste mês.</string>
+    <string name="planning_no_commitments">Nenhum pagamento ou recebimento pendente neste mês.\nQuando houver, eles aparecem aqui.</string>
     <string name="planning_in_progress">Em andamento</string>
     <string name="planning_budget_hint">Mostramos aqui as categorias com maior impacto. Os limites completos ficam em Orçamentos.</string>
     <string name="back_to_current_month">Voltar ao mês atual</string>
@@ -111,4 +111,13 @@
     <string name="reminder_notifications">Lembrar vencimentos e recebimentos</string>
     <string name="reminder_notifications_hint">Avisos locais 1 dia antes, no dia e se o compromisso continuar pendente.</string>
     <string name="overdue">Atrasado</string>
+    <string name="settings_security_reminders">SEGURANÇA E LEMBRETES</string>
+    <string name="settings_carry_balance_hint">Usa o saldo realizado como início do mês seguinte.</string>
+    <string name="settings_protect_hint">Exige o bloqueio seguro do Android ao voltar ao app.</string>
+    <string name="settings_export_title">Exportar movimentações</string>
+    <string name="settings_export_hint">Gera o CSV do mês selecionado.</string>
+    <string name="settings_backup_hint">Salva uma cópia completa dos seus dados.</string>
+    <string name="settings_restore_hint">Recupera dados de um arquivo de backup do Vira.</string>
+    <string name="settings_about">SOBRE O VIRA</string>
+    <string name="settings_version_alpha07">1.0.0 Alpha 07</string>
 </resources>
