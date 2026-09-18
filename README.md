@@ -15,11 +15,15 @@ Registrar rapidamente o que entrou e saiu do bolso, mantendo uma visão mensal s
 - [x] Exibir saldo, entradas e gastos
 - [x] Listar movimentações
 - [x] Persistir dados localmente com SQLite nativo
-- [ ] Editar e excluir movimentações
+- [x] Editar e excluir movimentações
 - [ ] Visão por mês
 - [ ] Gastos e ganhos recorrentes
 - [ ] Pago / pendente e recebido / a receber
 - [ ] Fechamento mensal automático
+
+## Uso
+
+Toque em uma movimentação da lista para editar tipo, descrição e valor ou para excluí-la.
 
 ## Persistência
 

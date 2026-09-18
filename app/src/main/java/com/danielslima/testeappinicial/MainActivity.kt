@@ -1,15 +1,18 @@
 package com.danielslima.testeappinicial
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.res.ColorStateList
 import android.database.sqlite.SQLiteException
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import java.math.BigDecimal
@@ -42,7 +45,6 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
 
         database = MovimentacaoDatabase(applicationContext)
 
@@ -166,6 +168,123 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun abrirEditor(movimentacao: Movimentacao) {
+        val view = layoutInflater.inflate(R.layout.dialog_editar_movimentacao, null)
+        val typeSpinner = view.findViewById<Spinner>(R.id.editTypeSpinner)
+        val descriptionEdit = view.findViewById<EditText>(R.id.editDescriptionInput)
+        val valueEdit = view.findViewById<EditText>(R.id.editValueInput)
+
+        val tipos = listOf("Gasto", "Ganho")
+        typeSpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            tipos
+        )
+        typeSpinner.setSelection(
+            if (movimentacao.tipo == TipoMovimentacao.GASTO) 0 else 1
+        )
+        descriptionEdit.setText(movimentacao.descricao)
+        valueEdit.setText(formatarValorParaEdicao(movimentacao.valorCentavos))
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Editar movimentação")
+            .setView(view)
+            .setPositiveButton("Salvar", null)
+            .setNegativeButton("Cancelar", null)
+            .setNeutralButton("Excluir", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val novaDescricao = descriptionEdit.text.toString().trim()
+                val novoValor = parseValorCentavos(valueEdit.text.toString())
+                val novoTipo = if (typeSpinner.selectedItemPosition == 0) {
+                    TipoMovimentacao.GASTO
+                } else {
+                    TipoMovimentacao.GANHO
+                }
+
+                if (novaDescricao.isBlank()) {
+                    descriptionEdit.error = "Digite o nome da movimentação"
+                    descriptionEdit.requestFocus()
+                    return@setOnClickListener
+                }
+
+                if (novoValor == null || novoValor <= 0) {
+                    valueEdit.error = "Digite um valor maior que zero"
+                    valueEdit.requestFocus()
+                    return@setOnClickListener
+                }
+
+                val atualizou = try {
+                    database.atualizar(
+                        id = movimentacao.id,
+                        tipo = novoTipo,
+                        descricao = novaDescricao,
+                        valorCentavos = novoValor
+                    )
+                } catch (erro: SQLiteException) {
+                    false
+                }
+
+                if (!atualizou) {
+                    Toast.makeText(
+                        this,
+                        "Não foi possível atualizar a movimentação.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@setOnClickListener
+                }
+
+                recarregarInterface()
+                dialog.dismiss()
+                Toast.makeText(this, "Movimentação atualizada", Toast.LENGTH_SHORT).show()
+            }
+
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                confirmarExclusao(movimentacao, dialog)
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun confirmarExclusao(
+        movimentacao: Movimentacao,
+        editorDialog: AlertDialog
+    ) {
+        AlertDialog.Builder(this)
+            .setTitle("Excluir movimentação?")
+            .setMessage("Essa ação não pode ser desfeita.")
+            .setPositiveButton("Excluir") { _, _ ->
+                val excluiu = try {
+                    database.excluir(movimentacao.id)
+                } catch (erro: SQLiteException) {
+                    false
+                }
+
+                if (excluiu) {
+                    recarregarInterface()
+                    editorDialog.dismiss()
+                    Toast.makeText(this, "Movimentação excluída", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Não foi possível excluir a movimentação.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun recarregarInterface() {
+        carregarMovimentacoes()
+        atualizarResumo()
+        renderizarMovimentacoes()
+    }
+
     private fun atualizarResumo() {
         val totalGanhos = movimentacoes
             .filter { it.tipo == TipoMovimentacao.GANHO }
@@ -232,6 +351,10 @@ class MainActivity : Activity() {
                 )
             )
 
+            row.setOnClickListener {
+                abrirEditor(movimentacao)
+            }
+
             movementsContainer.addView(row)
         }
     }
@@ -263,6 +386,12 @@ class MainActivity : Activity() {
 
     private fun formatarMoeda(valorCentavos: Long): String {
         return moeda.format(BigDecimal.valueOf(valorCentavos, 2))
+    }
+
+    private fun formatarValorParaEdicao(valorCentavos: Long): String {
+        return BigDecimal.valueOf(valorCentavos, 2)
+            .toPlainString()
+            .replace('.', ',')
     }
 
     private fun formatarMesAtual(): String {

@@ -59,6 +59,34 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         )
     }
 
+    fun atualizar(
+        id: Long,
+        tipo: TipoMovimentacao,
+        descricao: String,
+        valorCentavos: Long
+    ): Boolean {
+        val values = ContentValues().apply {
+            put(COLUNA_TIPO, tipo.name)
+            put(COLUNA_DESCRICAO, descricao)
+            put(COLUNA_VALOR_CENTAVOS, valorCentavos)
+        }
+
+        return writableDatabase.update(
+            TABELA_MOVIMENTACOES,
+            values,
+            "$COLUNA_ID = ?",
+            arrayOf(id.toString())
+        ) > 0
+    }
+
+    fun excluir(id: Long): Boolean {
+        return writableDatabase.delete(
+            TABELA_MOVIMENTACOES,
+            "$COLUNA_ID = ?",
+            arrayOf(id.toString())
+        ) > 0
+    }
+
     fun listarTodas(): List<Movimentacao> {
         val resultado = mutableListOf<Movimentacao>()
 
