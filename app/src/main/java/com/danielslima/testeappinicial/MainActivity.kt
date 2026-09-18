@@ -1152,138 +1152,197 @@ class MainActivity : Activity() {
     }
 
     private fun abrirEditor(movimentacao: Movimentacao) {
-        val view = layoutInflater.inflate(R.layout.dialog_editar_movimentacao, null)
-        val typeSpinner = view.findViewById<Spinner>(R.id.editTypeSpinner)
-        val statusSpinner = view.findViewById<Spinner>(R.id.editStatusSpinner)
-        val categoryEditSpinner = view.findViewById<Spinner>(R.id.editCategorySpinner)
-        val descriptionEdit = view.findViewById<EditText>(R.id.editDescriptionInput)
-        val valueEdit = view.findViewById<EditText>(R.id.editValueInput)
-
-        val tipos = listOf("Gasto", "Ganho")
-        typeSpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            tipos
+        val view = layoutInflater.inflate(
+            R.layout.dialog_vira_edit_movement,
+            null
         )
-        typeSpinner.setSelection(
-            if (movimentacao.tipo == TipoMovimentacao.GASTO) 0 else 1
-        )
+        val typeChoice =
+            view.findViewById<TextView>(R.id.editTypeChoice)
+        val statusChoice =
+            view.findViewById<TextView>(R.id.editStatusChoice)
+        val categoryChoice =
+            view.findViewById<TextView>(R.id.editCategoryChoice)
+        val descriptionEdit =
+            view.findViewById<EditText>(R.id.editDescriptionInput)
+        val valueEdit =
+            view.findViewById<EditText>(R.id.editValueInput)
+        val deleteButton =
+            view.findViewById<TextView>(R.id.editDeleteButton)
+        val cancelButton =
+            view.findViewById<TextView>(R.id.editCancelButton)
+        val saveButton =
+            view.findViewById<TextView>(R.id.editSaveButton)
 
-        configurarStatusSpinner(statusSpinner, movimentacao.tipo, movimentacao.status)
+        var tipoEditado = movimentacao.tipo
+        var statusEditado = movimentacao.status
+        var categoriaEditada = movimentacao.categoria
 
-        categoryEditSpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            CATEGORIAS
-        )
-        val categoriaAtualIndex = CATEGORIAS.indexOf(movimentacao.categoria)
-        categoryEditSpinner.setSelection(if (categoriaAtualIndex >= 0) categoriaAtualIndex else CATEGORIAS.indexOf("Outros"))
-
-        typeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>?,
-                view: View?,
-                position: Int,
-                id: Long
-            ) {
-                val statusAtual = if (statusSpinner.selectedItemPosition == 1) {
-                    StatusMovimentacao.PENDENTE
+        fun atualizarLabels() {
+            typeChoice.text =
+                if (tipoEditado == TipoMovimentacao.GASTO) {
+                    "Gasto"
                 } else {
-                    StatusMovimentacao.REALIZADO
+                    "Ganho"
                 }
-                val tipoAtual = if (position == 0) {
-                    TipoMovimentacao.GASTO
-                } else {
-                    TipoMovimentacao.GANHO
-                }
-                configurarStatusSpinner(statusSpinner, tipoAtual, statusAtual)
+
+            statusChoice.text = when {
+                tipoEditado == TipoMovimentacao.GASTO &&
+                    statusEditado == StatusMovimentacao.REALIZADO ->
+                    "Pago"
+                tipoEditado == TipoMovimentacao.GASTO ->
+                    "Pendente"
+                statusEditado == StatusMovimentacao.REALIZADO ->
+                    "Recebido"
+                else ->
+                    "A receber"
             }
 
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+            categoryChoice.text = categoriaEditada
         }
 
         descriptionEdit.setText(movimentacao.descricao)
-        valueEdit.setText(formatarValorParaEdicao(movimentacao.valorCentavos))
-
-        val neutralText = if (movimentacao.recorrenciaId == null) {
-            "Excluir"
-        } else {
-            "Desativar fixo"
-        }
+        valueEdit.setText(
+            formatarValorParaEdicao(movimentacao.valorCentavos)
+        )
+        deleteButton.text =
+            if (movimentacao.recorrenciaId == null) {
+                "Excluir lançamento"
+            } else {
+                "Desativar fixo"
+            }
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Editar movimentação")
             .setView(view)
-            .setPositiveButton("Salvar", null)
-            .setNegativeButton("Cancelar", null)
-            .setNeutralButton(neutralText, null)
             .create()
 
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val novaDescricao = descriptionEdit.text.toString().trim()
-                val novoValor = parseValorCentavos(valueEdit.text.toString())
-                val novoTipo = if (typeSpinner.selectedItemPosition == 0) {
-                    TipoMovimentacao.GASTO
-                } else {
-                    TipoMovimentacao.GANHO
-                }
-                val novoStatus = if (statusSpinner.selectedItemPosition == 0) {
-                    StatusMovimentacao.REALIZADO
-                } else {
-                    StatusMovimentacao.PENDENTE
-                }
-                val novaCategoria = categoryEditSpinner.selectedItem?.toString() ?: "Outros"
-
-                if (novaDescricao.isBlank()) {
-                    descriptionEdit.error = "Digite o nome da movimentação"
-                    descriptionEdit.requestFocus()
-                    return@setOnClickListener
-                }
-
-                if (novoValor == null || novoValor <= 0) {
-                    valueEdit.error = "Digite um valor maior que zero"
-                    valueEdit.requestFocus()
-                    return@setOnClickListener
-                }
-
-                val atualizou = try {
-                    database.atualizar(
-                        id = movimentacao.id,
-                        tipo = novoTipo,
-                        descricao = novaDescricao,
-                        valorCentavos = novoValor,
-                        status = novoStatus,
-                        categoria = novaCategoria
-                    )
-                } catch (erro: SQLiteException) {
-                    false
-                }
-
-                if (!atualizou) {
-                    Toast.makeText(
-                        this,
-                        "Não foi possível atualizar a movimentação.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@setOnClickListener
-                }
-
-                recarregarInterface()
-                dialog.dismiss()
-                Toast.makeText(this, "Movimentação atualizada", Toast.LENGTH_SHORT).show()
-            }
-
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                if (movimentacao.recorrenciaId == null) {
-                    confirmarExclusao(movimentacao, dialog)
-                } else {
-                    confirmarDesativacaoFixo(movimentacao.recorrenciaId, dialog)
-                }
+        typeChoice.setOnClickListener {
+            val tipos = listOf("Gasto", "Ganho")
+            abrirSeletorVira(
+                titulo = "Tipo de lançamento",
+                opcoes = tipos,
+                indiceAtual =
+                    if (tipoEditado == TipoMovimentacao.GASTO) 0 else 1
+            ) { index, _ ->
+                tipoEditado =
+                    if (index == 0) {
+                        TipoMovimentacao.GASTO
+                    } else {
+                        TipoMovimentacao.GANHO
+                    }
+                atualizarLabels()
             }
         }
 
+        statusChoice.setOnClickListener {
+            val opcoes =
+                if (tipoEditado == TipoMovimentacao.GASTO) {
+                    listOf("Pago", "Pendente")
+                } else {
+                    listOf("Recebido", "A receber")
+                }
+
+            abrirSeletorVira(
+                titulo = "Status",
+                opcoes = opcoes,
+                indiceAtual =
+                    if (statusEditado == StatusMovimentacao.REALIZADO) {
+                        0
+                    } else {
+                        1
+                    }
+            ) { index, _ ->
+                statusEditado =
+                    if (index == 0) {
+                        StatusMovimentacao.REALIZADO
+                    } else {
+                        StatusMovimentacao.PENDENTE
+                    }
+                atualizarLabels()
+            }
+        }
+
+        categoryChoice.setOnClickListener {
+            abrirSeletorVira(
+                titulo = "Categoria",
+                opcoes = CATEGORIAS,
+                indiceAtual = CATEGORIAS
+                    .indexOf(categoriaEditada)
+                    .coerceAtLeast(0)
+            ) { _, categoria ->
+                categoriaEditada = categoria
+                atualizarLabels()
+            }
+        }
+
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        saveButton.setOnClickListener {
+            val novaDescricao =
+                descriptionEdit.text.toString().trim()
+            val novoValor =
+                parseValorCentavos(valueEdit.text.toString())
+
+            if (novaDescricao.isBlank()) {
+                descriptionEdit.error =
+                    "Digite o nome da movimentação"
+                descriptionEdit.requestFocus()
+                return@setOnClickListener
+            }
+
+            if (novoValor == null || novoValor <= 0) {
+                valueEdit.error =
+                    "Digite um valor maior que zero"
+                valueEdit.requestFocus()
+                return@setOnClickListener
+            }
+
+            val atualizou = try {
+                database.atualizar(
+                    id = movimentacao.id,
+                    tipo = tipoEditado,
+                    descricao = novaDescricao,
+                    valorCentavos = novoValor,
+                    status = statusEditado,
+                    categoria = categoriaEditada
+                )
+            } catch (erro: SQLiteException) {
+                false
+            }
+
+            if (!atualizou) {
+                Toast.makeText(
+                    this,
+                    "Não foi possível atualizar a movimentação.",
+                    Toast.LENGTH_LONG
+                ).show()
+                return@setOnClickListener
+            }
+
+            recarregarInterface()
+            dialog.dismiss()
+            Toast.makeText(
+                this,
+                "Movimentação atualizada",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+
+        deleteButton.setOnClickListener {
+            if (movimentacao.recorrenciaId == null) {
+                confirmarExclusao(movimentacao, dialog)
+            } else {
+                confirmarDesativacaoFixo(
+                    movimentacao.recorrenciaId,
+                    dialog
+                )
+            }
+        }
+
+        atualizarLabels()
         dialog.show()
+        aplicarEstiloDialogVira(dialog)
     }
 
     private fun configurarStatusSpinner(
