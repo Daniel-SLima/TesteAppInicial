@@ -46,7 +46,6 @@ class MainActivity : Activity() {
     private lateinit var incomeButton: Button
     private lateinit var descriptionInput: EditText
     private lateinit var valueInput: EditText
-    private lateinit var categorySpinner: Spinner
     private lateinit var installmentCheckBox: CheckBox
     private lateinit var installmentOptions: LinearLayout
     private lateinit var installmentCountInput: EditText
@@ -68,9 +67,11 @@ class MainActivity : Activity() {
     private lateinit var categorySummaryText: TextView
     private lateinit var categoryChartContainer: LinearLayout
     private lateinit var movementSearchInput: EditText
-    private lateinit var filterTypeSpinner: Spinner
-    private lateinit var filterStatusSpinner: Spinner
-    private lateinit var filterCategorySpinner: Spinner
+    private lateinit var filterTypeChip: TextView
+    private lateinit var filterStatusChip: TextView
+    private lateinit var filterCategoryChip: TextView
+    private lateinit var clearFiltersButton: TextView
+    private lateinit var movementsResultSummary: TextView
     private lateinit var emptyStateText: TextView
     private lateinit var movementsContainer: LinearLayout
     private lateinit var historySection: LinearLayout
@@ -95,6 +96,11 @@ class MainActivity : Activity() {
     private var autenticacaoEmAndamento = false
     private var alterandoProtecao = false
     private var momentoSegundoPlanoMs: Long? = null
+    private var filtroTipo = 0
+    private var filtroStatus = 0
+    private var filtroCategoria = "Todas categorias"
+    private var categoriaNovoLancamento = "Outros"
+    private var dialogNovoLancamento: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,18 +110,6 @@ class MainActivity : Activity() {
         preferencias = getSharedPreferences(PREFERENCIAS, MODE_PRIVATE)
 
         mainScroll = findViewById(R.id.mainScroll)
-        expenseButton = findViewById(R.id.expenseButton)
-        incomeButton = findViewById(R.id.incomeButton)
-        descriptionInput = findViewById(R.id.descriptionInput)
-        valueInput = findViewById(R.id.valueInput)
-        categorySpinner = findViewById(R.id.categorySpinner)
-        installmentCheckBox = findViewById(R.id.installmentCheckBox)
-        installmentOptions = findViewById(R.id.installmentOptions)
-        installmentCountInput = findViewById(R.id.installmentCountInput)
-        installmentDayInput = findViewById(R.id.installmentDayInput)
-        recurringCheckBox = findViewById(R.id.recurringCheckBox)
-        recurringOptions = findViewById(R.id.recurringOptions)
-        recurringDayInput = findViewById(R.id.recurringDayInput)
         carryBalanceCheckBox = findViewById(R.id.carryBalanceCheckBox)
         securityCheckBox = findViewById(R.id.securityCheckBox)
         monthText = findViewById(R.id.monthText)
@@ -130,9 +124,11 @@ class MainActivity : Activity() {
         categorySummaryText = findViewById(R.id.categorySummaryText)
         categoryChartContainer = findViewById(R.id.categoryChartContainer)
         movementSearchInput = findViewById(R.id.movementSearchInput)
-        filterTypeSpinner = findViewById(R.id.filterTypeSpinner)
-        filterStatusSpinner = findViewById(R.id.filterStatusSpinner)
-        filterCategorySpinner = findViewById(R.id.filterCategorySpinner)
+        filterTypeChip = findViewById(R.id.filterTypeChip)
+        filterStatusChip = findViewById(R.id.filterStatusChip)
+        filterCategoryChip = findViewById(R.id.filterCategoryChip)
+        clearFiltersButton = findViewById(R.id.clearFiltersButton)
+        movementsResultSummary = findViewById(R.id.movementsResultSummary)
         emptyStateText = findViewById(R.id.emptyStateText)
         movementsContainer = findViewById(R.id.movementsContainer)
         historySection = findViewById(R.id.historySection)
@@ -149,31 +145,7 @@ class MainActivity : Activity() {
         movementsMonthText = findViewById(R.id.movementsMonthText)
         planningMonthText = findViewById(R.id.planningMonthText)
 
-        categorySpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            CATEGORIAS
-        )
-        categorySpinner.setSelection(CATEGORIAS.indexOf("Outros"))
-
         configurarFiltros()
-        recurringDayInput.setText(LocalDate.now().dayOfMonth.toString())
-        installmentCountInput.setText("2")
-        installmentDayInput.setText(LocalDate.now().dayOfMonth.toString())
-
-        installmentCheckBox.setOnCheckedChangeListener { _, checked ->
-            installmentOptions.visibility = if (checked) View.VISIBLE else View.GONE
-            if (checked) {
-                recurringCheckBox.isChecked = false
-            }
-        }
-
-        recurringCheckBox.setOnCheckedChangeListener { _, checked ->
-            recurringOptions.visibility = if (checked) View.VISIBLE else View.GONE
-            if (checked) {
-                installmentCheckBox.isChecked = false
-            }
-        }
 
         carryBalanceCheckBox.isChecked = preferencias.getBoolean(
             CHAVE_CARREGAR_SALDO,
@@ -258,16 +230,8 @@ class MainActivity : Activity() {
             recarregarInterface()
         }
 
-        expenseButton.setOnClickListener {
-            selecionarTipo(TipoMovimentacao.GASTO)
-        }
-
-        incomeButton.setOnClickListener {
-            selecionarTipo(TipoMovimentacao.GANHO)
-        }
-
-        findViewById<Button>(R.id.registerButton).setOnClickListener {
-            registrarMovimentacao()
+        findViewById<TextView>(R.id.newMovementButton).setOnClickListener {
+            abrirNovoLancamento(TipoMovimentacao.GASTO)
         }
 
         navHome.setOnClickListener {
@@ -284,21 +248,13 @@ class MainActivity : Activity() {
         }
 
         findViewById<Button>(R.id.homeExpenseQuickButton).setOnClickListener {
-            selecionarTipo(TipoMovimentacao.GASTO)
             selecionarSecao(ViraSection.MOVEMENTS)
-            mainScroll.post {
-                mainScroll.smoothScrollTo(0, 0)
-                descriptionInput.requestFocus()
-            }
+            abrirNovoLancamento(TipoMovimentacao.GASTO)
         }
 
         findViewById<Button>(R.id.homeIncomeQuickButton).setOnClickListener {
-            selecionarTipo(TipoMovimentacao.GANHO)
             selecionarSecao(ViraSection.MOVEMENTS)
-            mainScroll.post {
-                mainScroll.smoothScrollTo(0, 0)
-                descriptionInput.requestFocus()
-            }
+            abrirNovoLancamento(TipoMovimentacao.GANHO)
         }
 
         findViewById<TextView>(R.id.homeSeeAllMovements).setOnClickListener {
@@ -312,7 +268,6 @@ class MainActivity : Activity() {
             selecionarSecao(ViraSection.PLANNING)
         }
 
-        selecionarTipo(TipoMovimentacao.GASTO)
         selecionarSecao(ViraSection.initial())
         recarregarInterface()
     }
@@ -438,40 +393,51 @@ class MainActivity : Activity() {
     }
 
     private fun configurarFiltros() {
-        filterTypeSpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            listOf("Todos", "Gastos", "Ganhos")
-        )
-        filterStatusSpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            listOf("Todos status", "Realizados", "Pendentes")
-        )
-        filterCategorySpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            listOf("Todas categorias") + CATEGORIAS
-        )
-
-        val listener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>?,
-                view: View?,
-                position: Int,
-                id: Long
-            ) {
-                if (::movementsContainer.isInitialized) {
-                    renderizarMovimentacoes()
-                }
+        filterTypeChip.setOnClickListener {
+            abrirSeletorVira(
+                titulo = "Tipo de movimentação",
+                opcoes = listOf("Todos", "Gastos", "Ganhos"),
+                indiceAtual = filtroTipo
+            ) { index, _ ->
+                filtroTipo = index
+                atualizarChipsFiltro()
+                renderizarMovimentacoes()
             }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
 
-        filterTypeSpinner.onItemSelectedListener = listener
-        filterStatusSpinner.onItemSelectedListener = listener
-        filterCategorySpinner.onItemSelectedListener = listener
+        filterStatusChip.setOnClickListener {
+            abrirSeletorVira(
+                titulo = "Status",
+                opcoes = listOf("Todos status", "Realizados", "Pendentes"),
+                indiceAtual = filtroStatus
+            ) { index, _ ->
+                filtroStatus = index
+                atualizarChipsFiltro()
+                renderizarMovimentacoes()
+            }
+        }
+
+        filterCategoryChip.setOnClickListener {
+            val opcoes = listOf("Todas categorias") + CATEGORIAS
+            abrirSeletorVira(
+                titulo = "Categoria",
+                opcoes = opcoes,
+                indiceAtual = opcoes.indexOf(filtroCategoria).coerceAtLeast(0)
+            ) { _, valor ->
+                filtroCategoria = valor
+                atualizarChipsFiltro()
+                renderizarMovimentacoes()
+            }
+        }
+
+        clearFiltersButton.setOnClickListener {
+            filtroTipo = 0
+            filtroStatus = 0
+            filtroCategoria = "Todas categorias"
+            movementSearchInput.text.clear()
+            atualizarChipsFiltro()
+            renderizarMovimentacoes()
+        }
 
         movementSearchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(
@@ -487,11 +453,216 @@ class MainActivity : Activity() {
                 before: Int,
                 count: Int
             ) {
+                atualizarChipsFiltro()
                 renderizarMovimentacoes()
             }
 
             override fun afterTextChanged(s: Editable?) = Unit
         })
+
+        atualizarChipsFiltro()
+    }
+
+    private fun atualizarChipsFiltro() {
+        filterTypeChip.text = when (filtroTipo) {
+            1 -> "Gastos"
+            2 -> "Ganhos"
+            else -> "Todos"
+        }
+        filterStatusChip.text = when (filtroStatus) {
+            1 -> "Realizados"
+            2 -> "Pendentes"
+            else -> "Status"
+        }
+        filterCategoryChip.text =
+            if (filtroCategoria == "Todas categorias") {
+                "Categorias"
+            } else {
+                filtroCategoria
+            }
+
+        val tipoAtivo = filtroTipo != 0
+        val statusAtivo = filtroStatus != 0
+        val categoriaAtiva = filtroCategoria != "Todas categorias"
+
+        filterTypeChip.setBackgroundResource(
+            if (tipoAtivo) R.drawable.vira_filter_chip_active
+            else R.drawable.vira_filter_chip
+        )
+        filterStatusChip.setBackgroundResource(
+            if (statusAtivo) R.drawable.vira_filter_chip_active
+            else R.drawable.vira_filter_chip
+        )
+        filterCategoryChip.setBackgroundResource(
+            if (categoriaAtiva) R.drawable.vira_filter_chip_active
+            else R.drawable.vira_filter_chip
+        )
+
+        clearFiltersButton.visibility =
+            if (
+                tipoAtivo ||
+                statusAtivo ||
+                categoriaAtiva ||
+                movementSearchInput.text?.isNotBlank() == true
+            ) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+    }
+
+    private fun abrirSeletorVira(
+        titulo: String,
+        opcoes: List<String>,
+        indiceAtual: Int,
+        onSelected: (Int, String) -> Unit
+    ) {
+        val view = layoutInflater.inflate(R.layout.dialog_vira_choice, null)
+        view.findViewById<TextView>(R.id.choiceDialogTitle).text = titulo
+        val optionsContainer =
+            view.findViewById<LinearLayout>(R.id.choiceOptionsContainer)
+        val closeButton =
+            view.findViewById<TextView>(R.id.choiceDialogCloseButton)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+
+        opcoes.forEachIndexed { index, opcao ->
+            val row = TextView(this).apply {
+                text = if (index == indiceAtual) "✓  $opcao" else opcao
+                textSize = 14f
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                minimumHeight = dp(52)
+                setPadding(dp(14), 0, dp(14), 0)
+                setTextColor(
+                    getColor(
+                        if (index == indiceAtual) {
+                            R.color.brand_secondary
+                        } else {
+                            R.color.text_primary
+                        }
+                    )
+                )
+                setBackgroundResource(R.drawable.vira_dialog_row)
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    dialog.dismiss()
+                    onSelected(index, opcao)
+                }
+            }
+
+            optionsContainer.addView(row)
+
+            if (index < opcoes.lastIndex) {
+                optionsContainer.addView(
+                    View(this).apply {
+                        setBackgroundColor(getColor(R.color.border))
+                    },
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(1)
+                    ).apply {
+                        marginStart = dp(12)
+                        marginEnd = dp(12)
+                    }
+                )
+            }
+        }
+
+        closeButton.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
+        aplicarEstiloDialogVira(dialog)
+    }
+
+    private fun abrirNovoLancamento(tipoInicial: TipoMovimentacao) {
+        val view = layoutInflater.inflate(
+            R.layout.dialog_vira_new_movement,
+            null
+        )
+
+        expenseButton = view.findViewById(R.id.expenseButton)
+        incomeButton = view.findViewById(R.id.incomeButton)
+        descriptionInput = view.findViewById(R.id.descriptionInput)
+        valueInput = view.findViewById(R.id.valueInput)
+        installmentCheckBox = view.findViewById(R.id.installmentCheckBox)
+        installmentOptions = view.findViewById(R.id.installmentOptions)
+        installmentCountInput = view.findViewById(R.id.installmentCountInput)
+        installmentDayInput = view.findViewById(R.id.installmentDayInput)
+        recurringCheckBox = view.findViewById(R.id.recurringCheckBox)
+        recurringOptions = view.findViewById(R.id.recurringOptions)
+        recurringDayInput = view.findViewById(R.id.recurringDayInput)
+
+        val categoryChoice =
+            view.findViewById<TextView>(R.id.newMovementCategoryChoice)
+        val cancelButton =
+            view.findViewById<TextView>(R.id.newMovementCancelButton)
+        val saveButton =
+            view.findViewById<TextView>(R.id.newMovementSaveButton)
+
+        categoriaNovoLancamento = "Outros"
+        categoryChoice.text = categoriaNovoLancamento
+        installmentCountInput.setText("2")
+        installmentDayInput.setText(LocalDate.now().dayOfMonth.toString())
+        recurringDayInput.setText(LocalDate.now().dayOfMonth.toString())
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+        dialogNovoLancamento = dialog
+
+        expenseButton.setOnClickListener {
+            selecionarTipo(TipoMovimentacao.GASTO)
+        }
+        incomeButton.setOnClickListener {
+            selecionarTipo(TipoMovimentacao.GANHO)
+        }
+
+        installmentCheckBox.setOnCheckedChangeListener { _, checked ->
+            installmentOptions.visibility =
+                if (checked) View.VISIBLE else View.GONE
+            if (checked) recurringCheckBox.isChecked = false
+        }
+
+        recurringCheckBox.setOnCheckedChangeListener { _, checked ->
+            recurringOptions.visibility =
+                if (checked) View.VISIBLE else View.GONE
+            if (checked) installmentCheckBox.isChecked = false
+        }
+
+        categoryChoice.setOnClickListener {
+            abrirSeletorVira(
+                titulo = "Categoria",
+                opcoes = CATEGORIAS,
+                indiceAtual = CATEGORIAS.indexOf(categoriaNovoLancamento)
+                    .coerceAtLeast(0)
+            ) { _, categoria ->
+                categoriaNovoLancamento = categoria
+                categoryChoice.text = categoria
+            }
+        }
+
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+            dialogNovoLancamento = null
+        }
+
+        saveButton.setOnClickListener {
+            registrarMovimentacao()
+        }
+
+        selecionarTipo(tipoInicial)
+        dialog.setOnDismissListener {
+            if (dialogNovoLancamento === dialog) {
+                dialogNovoLancamento = null
+            }
+        }
+
+        dialog.show()
+        aplicarEstiloDialogVira(dialog)
+        descriptionInput.requestFocus()
     }
 
     private fun selecionarTipo(tipo: TipoMovimentacao) {
@@ -528,7 +699,7 @@ class MainActivity : Activity() {
     private fun registrarMovimentacao() {
         val descricao = descriptionInput.text.toString().trim()
         val valorCentavos = parseValorCentavos(valueInput.text.toString())
-        val categoria = categorySpinner.selectedItem?.toString() ?: "Outros"
+        val categoria = categoriaNovoLancamento
 
         if (descricao.isBlank()) {
             descriptionInput.error = "Digite o nome da movimentação"
@@ -598,6 +769,8 @@ class MainActivity : Activity() {
 
         limparFormulario()
         recarregarInterface()
+        dialogNovoLancamento?.dismiss()
+        dialogNovoLancamento = null
 
         Toast.makeText(
             this,
@@ -631,6 +804,8 @@ class MainActivity : Activity() {
         mesSelecionado = YearMonth.from(novaMovimentacao.data)
         limparFormulario()
         recarregarInterface()
+        dialogNovoLancamento?.dismiss()
+        dialogNovoLancamento = null
 
         Toast.makeText(this, "Movimentação salva no aparelho", Toast.LENGTH_SHORT).show()
         rolarParaHistorico()
@@ -671,6 +846,8 @@ class MainActivity : Activity() {
         mesSelecionado = YearMonth.now()
         limparFormulario()
         recarregarInterface()
+        dialogNovoLancamento?.dismiss()
+        dialogNovoLancamento = null
 
         Toast.makeText(this, "Fixo mensal criado como pendente", Toast.LENGTH_SHORT).show()
         rolarParaHistorico()
@@ -679,7 +856,7 @@ class MainActivity : Activity() {
     private fun limparFormulario() {
         descriptionInput.text.clear()
         valueInput.text.clear()
-        categorySpinner.setSelection(CATEGORIAS.indexOf("Outros"))
+        categoriaNovoLancamento = "Outros"
         installmentCheckBox.isChecked = false
         installmentCountInput.setText("2")
         installmentDayInput.setText(LocalDate.now().dayOfMonth.toString())
@@ -2063,10 +2240,9 @@ class MainActivity : Activity() {
             ?.lowercase(localeBrasil)
             .orEmpty()
 
-        val tipoFiltro = filterTypeSpinner.selectedItemPosition
-        val statusFiltro = filterStatusSpinner.selectedItemPosition
-        val categoriaFiltro =
-            filterCategorySpinner.selectedItem?.toString() ?: "Todas categorias"
+        val tipoFiltro = filtroTipo
+        val statusFiltro = filtroStatus
+        val categoriaFiltro = filtroCategoria
 
         return movimentacoes.filter { movimentacao ->
             val correspondeBusca = busca.isBlank() ||
@@ -2100,6 +2276,12 @@ class MainActivity : Activity() {
         movementsContainer.removeAllViews()
 
         val filtradas = movimentacoesFiltradas()
+        movementsResultSummary.text = when {
+            movimentacoes.isEmpty() -> "Nenhum lançamento neste mês"
+            filtradas.size == movimentacoes.size ->
+                "${filtradas.size} lançamentos neste mês"
+            else -> "${filtradas.size} de ${movimentacoes.size} lançamentos"
+        }
         emptyStateText.visibility = if (filtradas.isEmpty()) View.VISIBLE else View.GONE
         emptyStateText.text = if (movimentacoes.isEmpty()) {
             getString(R.string.empty_state_month)
@@ -2143,7 +2325,34 @@ class MainActivity : Activity() {
             }
 
             row.findViewById<TextView>(R.id.movementMeta).text =
-                "${movimentacao.categoria} • ${tipoTexto}${fixoTexto}${parcelaTexto} • $statusTexto • ${movimentacao.data.format(dateFormatter)}"
+                "${movimentacao.categoria} • ${tipoTexto}${fixoTexto}${parcelaTexto} • ${movimentacao.data.format(dateFormatter)}"
+
+            row.findViewById<TextView>(R.id.movementStatus).apply {
+                text = statusTexto
+                setTextColor(
+                    getColor(
+                        if (movimentacao.status == StatusMovimentacao.PENDENTE) {
+                            R.color.brand_gold
+                        } else if (
+                            movimentacao.tipo == TipoMovimentacao.GASTO
+                        ) {
+                            R.color.expense
+                        } else {
+                            R.color.income
+                        }
+                    )
+                )
+            }
+
+            row.findViewById<View>(R.id.movementAccent).setBackgroundColor(
+                getColor(
+                    if (movimentacao.tipo == TipoMovimentacao.GASTO) {
+                        R.color.expense
+                    } else {
+                        R.color.income
+                    }
+                )
+            )
 
             val amountText = row.findViewById<TextView>(R.id.movementAmount)
             val sinal = if (movimentacao.tipo == TipoMovimentacao.GASTO) "-" else "+"
