@@ -65,3 +65,12 @@ Fingerprint SHA-256 esperado do certificado público:
 `84:6D:68:33:75:0F:2F:51:1F:79:36:C7:A3:81:DE:1F:5A:B2:8C:53:40:02:13:AC:8D:61:44:AE:8F:DF:17:57`
 
 Sem os Secrets, o workflow continua verde, mas gera um APK explicitamente marcado como `DEBUG-NAO-ATUALIZA`, que não deve ser usado como base de atualização.
+
+
+## Versão 0.11.0
+
+- Visualização horizontal dos gastos por categoria.
+- Total mensal de gastos previsto no painel de categorias.
+- Exportação do mês selecionado para CSV.
+- CSV compatível com Excel/Google Sheets usando separador por ponto e vírgula e valores monetários em formato brasileiro.
+- Exporta data, tipo, status, categoria, descrição, valor e indicação de lançamento fixo.

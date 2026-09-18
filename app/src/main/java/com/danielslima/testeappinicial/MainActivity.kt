@@ -2,9 +2,11 @@ package com.danielslima.testeappinicial
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
 import android.database.sqlite.SQLiteException
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -16,6 +18,7 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
@@ -55,6 +58,7 @@ class MainActivity : Activity() {
     private lateinit var pendingIncomeText: TextView
     private lateinit var pendingExpenseText: TextView
     private lateinit var categorySummaryText: TextView
+    private lateinit var categoryChartContainer: LinearLayout
     private lateinit var movementSearchInput: EditText
     private lateinit var filterTypeSpinner: Spinner
     private lateinit var filterStatusSpinner: Spinner
@@ -66,6 +70,7 @@ class MainActivity : Activity() {
     private var tipoSelecionado = TipoMovimentacao.GASTO
     private var mesSelecionado = YearMonth.now()
     private var mesAtualReferencia = YearMonth.now()
+    private var mesExportacaoPendente: YearMonth? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,6 +99,7 @@ class MainActivity : Activity() {
         pendingIncomeText = findViewById(R.id.pendingIncomeText)
         pendingExpenseText = findViewById(R.id.pendingExpenseText)
         categorySummaryText = findViewById(R.id.categorySummaryText)
+        categoryChartContainer = findViewById(R.id.categoryChartContainer)
         movementSearchInput = findViewById(R.id.movementSearchInput)
         filterTypeSpinner = findViewById(R.id.filterTypeSpinner)
         filterStatusSpinner = findViewById(R.id.filterStatusSpinner)
@@ -129,6 +135,10 @@ class MainActivity : Activity() {
 
         findViewById<Button>(R.id.manageRecurringButton).setOnClickListener {
             abrirGerenciadorFixos()
+        }
+
+        findViewById<Button>(R.id.exportCsvButton).setOnClickListener {
+            iniciarExportacaoCsv()
         }
 
         findViewById<Button>(R.id.previousMonthButton).setOnClickListener {
@@ -175,6 +185,20 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         database.close()
         super.onDestroy()
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?
+    ) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == REQUEST_EXPORT_CSV && resultCode == RESULT_OK) {
+            val uri = data?.data ?: return
+            exportarCsv(uri)
+        }
     }
 
     private fun carregarMovimentacoes() {
@@ -850,13 +874,190 @@ class MainActivity : Activity() {
             .entries
             .sortedByDescending { it.value }
 
-        categorySummaryText.text = if (gastosPorCategoria.isEmpty()) {
-            "Sem gastos previstos neste mês."
-        } else {
-            gastosPorCategoria.joinToString("\n") { (categoria, total) ->
-                "${categoria}  •  ${formatarMoeda(total)}"
-            }
+        categoryChartContainer.removeAllViews()
+
+        if (gastosPorCategoria.isEmpty()) {
+            categorySummaryText.text = "Sem gastos previstos neste mês."
+            return
         }
+
+        val totalGastos = gastosPorCategoria.sumOf { it.value }
+        val maiorValor = gastosPorCategoria.maxOf { it.value }.coerceAtLeast(1L)
+
+        categorySummaryText.text =
+            "Total de gastos do mês: ${formatarMoeda(totalGastos)}"
+
+        gastosPorCategoria.forEach { (categoria, total) ->
+            val bloco = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, 0, 0, dp(14))
+            }
+
+            val cabecalho = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+            }
+
+            val nome = TextView(this).apply {
+                text = categoria
+                textSize = 14f
+                setTextColor(getColor(R.color.text_primary))
+            }
+            cabecalho.addView(
+                nome,
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            )
+
+            val valor = TextView(this).apply {
+                text = formatarMoeda(total)
+                textSize = 14f
+                setTextColor(getColor(R.color.expense))
+            }
+            cabecalho.addView(valor)
+
+            val barra = ProgressBar(
+                this,
+                null,
+                android.R.attr.progressBarStyleHorizontal
+            ).apply {
+                max = 1000
+                progress = ((total * 1000L) / maiorValor)
+                    .toInt()
+                    .coerceIn(0, 1000)
+                progressTintList = ColorStateList.valueOf(getColor(R.color.expense))
+                progressBackgroundTintList =
+                    ColorStateList.valueOf(getColor(R.color.unselected))
+            }
+
+            bloco.addView(cabecalho)
+            bloco.addView(
+                barra,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(8)
+                ).apply {
+                    topMargin = dp(5)
+                }
+            )
+
+            categoryChartContainer.addView(bloco)
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun iniciarExportacaoCsv() {
+        mesExportacaoPendente = mesSelecionado
+
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/csv"
+            putExtra(
+                Intent.EXTRA_TITLE,
+                "FinTest-${mesSelecionado}.csv"
+            )
+        }
+
+        startActivityForResult(intent, REQUEST_EXPORT_CSV)
+    }
+
+    private fun exportarCsv(uri: Uri) {
+        val mes = mesExportacaoPendente ?: mesSelecionado
+
+        try {
+            val output = contentResolver.openOutputStream(uri)
+                ?: throw IllegalStateException("Não foi possível abrir o arquivo.")
+
+            output.bufferedWriter(Charsets.UTF_8).use { writer ->
+                writer.write("\uFEFF")
+                writer.write(
+                    "Data;Tipo;Status;Categoria;Descrição;Valor;Fixo\n"
+                )
+
+                movimentacoes
+                    .sortedBy { it.data }
+                    .forEach { movimentacao ->
+                        val tipo = if (
+                            movimentacao.tipo == TipoMovimentacao.GASTO
+                        ) {
+                            "Gasto"
+                        } else {
+                            "Ganho"
+                        }
+
+                        val status = when {
+                            movimentacao.tipo == TipoMovimentacao.GASTO &&
+                                movimentacao.status == StatusMovimentacao.REALIZADO ->
+                                "Pago"
+                            movimentacao.tipo == TipoMovimentacao.GASTO ->
+                                "Pendente"
+                            movimentacao.status == StatusMovimentacao.REALIZADO ->
+                                "Recebido"
+                            else ->
+                                "A receber"
+                        }
+
+                        val dataTexto = movimentacao.data.format(
+                            DateTimeFormatter.ofPattern(
+                                "dd/MM/yyyy HH:mm",
+                                localeBrasil
+                            )
+                        )
+                        val valorTexto = BigDecimal.valueOf(
+                            movimentacao.valorCentavos,
+                            2
+                        )
+                            .toPlainString()
+                            .replace('.', ',')
+
+                        val linha = listOf(
+                            dataTexto,
+                            tipo,
+                            status,
+                            movimentacao.categoria,
+                            movimentacao.descricao,
+                            valorTexto,
+                            if (movimentacao.recorrenciaId != null) "Sim" else "Não"
+                        ).joinToString(";") { csvCampo(it) }
+
+                        writer.write(linha)
+                        writer.write("\n")
+                    }
+            }
+
+            Toast.makeText(
+                this,
+                "CSV de ${formatarMes(mes)} exportado",
+                Toast.LENGTH_LONG
+            ).show()
+        } catch (erro: Exception) {
+            Toast.makeText(
+                this,
+                "Não foi possível exportar o CSV.",
+                Toast.LENGTH_LONG
+            ).show()
+        } finally {
+            mesExportacaoPendente = null
+        }
+    }
+
+    private fun csvCampo(valor: String): String {
+        val escapado = valor.replace(""", """")
+        return if (
+            escapado.contains(';') ||
+            escapado.contains('"') ||
+            escapado.contains('\n')
+        ) {
+            ""$escapado""
+        } else {
+            escapado
+        }
+    }
+
+    private fun dp(valor: Int): Int {
+        return (valor * resources.displayMetrics.density).toInt()
     }
 
     private fun movimentacoesFiltradas(): List<Movimentacao> {
@@ -1018,6 +1219,8 @@ class MainActivity : Activity() {
     companion object {
         private const val PREFERENCIAS = "fintest_preferences"
         private const val CHAVE_CARREGAR_SALDO = "carregar_saldo_entre_meses"
+        private const val REQUEST_EXPORT_CSV = 1201
+
         private val CATEGORIAS = listOf(
             "Alimentação",
             "Transporte",

@@ -27,6 +27,7 @@
     <string name="carry_balance">Levar saldo realizado para o próximo mês</string>
     <string name="category_summary">Gastos previstos por categoria</string>
     <string name="category_summary_hint">Inclui gastos pagos e pendentes deste mês.</string>
+    <string name="export_csv">Exportar CSV do mês</string>
     <string name="movements">Movimentações</string>
     <string name="search_movements">Buscar movimentação ou categoria…</string>
     <string name="filters">Filtros</string>
