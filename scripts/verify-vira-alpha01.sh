@@ -27,9 +27,11 @@ for id in   homeScreen mainScroll planningScreen settingsScreen   navHome navMov
   test "$count" = "1" || fail "id ${id} aparece ${count} vezes"
 done
 
-if grep -Rni --exclude='*.md' 'FinTest' app/src/main >/tmp/vira-old-name.txt; then
+if grep -Rn --exclude='*.md' 'FinTest' app/src/main >/tmp/vira-old-name.txt; then
   cat /tmp/vira-old-name.txt
-  fail "nome antigo ainda aparece em recursos/código visível do app"
+  fail "nome visível antigo ainda aparece no app"
 fi
 
+# Identificadores internos legados em minúsculas (como fintest_preferences)
+# são preservados intencionalmente para manter configurações após a atualização.
 echo "Vira Alpha 01: estrutura validada"
