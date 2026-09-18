@@ -6,6 +6,8 @@ import android.content.SharedPreferences
 import android.content.res.ColorStateList
 import android.database.sqlite.SQLiteException
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.AdapterView
@@ -52,6 +54,11 @@ class MainActivity : Activity() {
     private lateinit var expenseTotalText: TextView
     private lateinit var pendingIncomeText: TextView
     private lateinit var pendingExpenseText: TextView
+    private lateinit var categorySummaryText: TextView
+    private lateinit var movementSearchInput: EditText
+    private lateinit var filterTypeSpinner: Spinner
+    private lateinit var filterStatusSpinner: Spinner
+    private lateinit var filterCategorySpinner: Spinner
     private lateinit var emptyStateText: TextView
     private lateinit var movementsContainer: LinearLayout
     private lateinit var historySection: LinearLayout
@@ -86,6 +93,11 @@ class MainActivity : Activity() {
         expenseTotalText = findViewById(R.id.expenseTotalText)
         pendingIncomeText = findViewById(R.id.pendingIncomeText)
         pendingExpenseText = findViewById(R.id.pendingExpenseText)
+        categorySummaryText = findViewById(R.id.categorySummaryText)
+        movementSearchInput = findViewById(R.id.movementSearchInput)
+        filterTypeSpinner = findViewById(R.id.filterTypeSpinner)
+        filterStatusSpinner = findViewById(R.id.filterStatusSpinner)
+        filterCategorySpinner = findViewById(R.id.filterCategorySpinner)
         emptyStateText = findViewById(R.id.emptyStateText)
         movementsContainer = findViewById(R.id.movementsContainer)
         historySection = findViewById(R.id.historySection)
@@ -97,6 +109,7 @@ class MainActivity : Activity() {
         )
         categorySpinner.setSelection(CATEGORIAS.indexOf("Outros"))
 
+        configurarFiltros()
         recurringDayInput.setText(LocalDate.now().dayOfMonth.toString())
 
         recurringCheckBox.setOnCheckedChangeListener { _, checked ->
@@ -166,9 +179,7 @@ class MainActivity : Activity() {
 
     private fun carregarMovimentacoes() {
         try {
-            if (!mesSelecionado.isAfter(YearMonth.now())) {
-                database.garantirRecorrenciasParaMes(mesSelecionado)
-            }
+            database.garantirRecorrenciasParaMes(mesSelecionado)
 
             movimentacoes.clear()
             movimentacoes.addAll(database.listarPorMes(mesSelecionado))
@@ -179,6 +190,63 @@ class MainActivity : Activity() {
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+
+    private fun configurarFiltros() {
+        filterTypeSpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            listOf("Todos", "Gastos", "Ganhos")
+        )
+        filterStatusSpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            listOf("Todos status", "Realizados", "Pendentes")
+        )
+        filterCategorySpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            listOf("Todas categorias") + CATEGORIAS
+        )
+
+        val listener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                if (::movementsContainer.isInitialized) {
+                    renderizarMovimentacoes()
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+
+        filterTypeSpinner.onItemSelectedListener = listener
+        filterStatusSpinner.onItemSelectedListener = listener
+        filterCategorySpinner.onItemSelectedListener = listener
+
+        movementSearchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(
+                s: CharSequence?,
+                start: Int,
+                count: Int,
+                after: Int
+            ) = Unit
+
+            override fun onTextChanged(
+                s: CharSequence?,
+                start: Int,
+                before: Int,
+                count: Int
+            ) {
+                renderizarMovimentacoes()
+            }
+
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
     }
 
     private fun selecionarTipo(tipo: TipoMovimentacao) {
@@ -344,18 +412,120 @@ class MainActivity : Activity() {
     }
 
     private fun abrirDetalheRecorrencia(recorrencia: Recorrencia) {
-        val tipo = if (recorrencia.tipo == TipoMovimentacao.GASTO) "Gasto" else "Ganho"
+        val view = layoutInflater.inflate(R.layout.dialog_editar_recorrencia, null)
+        val typeSpinner = view.findViewById<Spinner>(R.id.recurringTypeSpinner)
+        val categorySpinner = view.findViewById<Spinner>(R.id.recurringCategorySpinner)
+        val descriptionEdit = view.findViewById<EditText>(R.id.recurringDescriptionInput)
+        val valueEdit = view.findViewById<EditText>(R.id.recurringValueInput)
+        val dayEdit = view.findViewById<EditText>(R.id.recurringDayEditInput)
 
-        AlertDialog.Builder(this)
-            .setTitle(recorrencia.descricao)
-            .setMessage(
-                "$tipo mensal\n${formatarMoeda(recorrencia.valorCentavos)}\nDia ${recorrencia.diaMes} de cada mês"
-            )
-            .setPositiveButton("Desativar") { _, _ ->
-                desativarRecorrencia(recorrencia.id)
-            }
+        typeSpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            listOf("Gasto", "Ganho")
+        )
+        typeSpinner.setSelection(
+            if (recorrencia.tipo == TipoMovimentacao.GASTO) 0 else 1
+        )
+
+        categorySpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            CATEGORIAS
+        )
+        val categoriaIndex = CATEGORIAS.indexOf(recorrencia.categoria)
+        categorySpinner.setSelection(
+            if (categoriaIndex >= 0) categoriaIndex else CATEGORIAS.indexOf("Outros")
+        )
+
+        descriptionEdit.setText(recorrencia.descricao)
+        valueEdit.setText(formatarValorParaEdicao(recorrencia.valorCentavos))
+        dayEdit.setText(recorrencia.diaMes.toString())
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Editar fixo mensal")
+            .setView(view)
+            .setPositiveButton("Salvar", null)
             .setNegativeButton("Cancelar", null)
-            .show()
+            .setNeutralButton("Desativar", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val descricao = descriptionEdit.text.toString().trim()
+                val valor = parseValorCentavos(valueEdit.text.toString())
+                val dia = dayEdit.text.toString().toIntOrNull()
+                val tipo = if (typeSpinner.selectedItemPosition == 0) {
+                    TipoMovimentacao.GASTO
+                } else {
+                    TipoMovimentacao.GANHO
+                }
+                val categoria = categorySpinner.selectedItem?.toString() ?: "Outros"
+
+                if (descricao.isBlank()) {
+                    descriptionEdit.error = "Digite o nome do fixo"
+                    descriptionEdit.requestFocus()
+                    return@setOnClickListener
+                }
+
+                if (valor == null || valor <= 0) {
+                    valueEdit.error = "Digite um valor maior que zero"
+                    valueEdit.requestFocus()
+                    return@setOnClickListener
+                }
+
+                if (dia == null || dia !in 1..31) {
+                    dayEdit.error = "Use um dia entre 1 e 31"
+                    dayEdit.requestFocus()
+                    return@setOnClickListener
+                }
+
+                val atualizou = try {
+                    database.atualizarRecorrencia(
+                        id = recorrencia.id,
+                        tipo = tipo,
+                        descricao = descricao,
+                        valorCentavos = valor,
+                        diaMes = dia,
+                        categoria = categoria
+                    )
+                } catch (erro: SQLiteException) {
+                    false
+                }
+
+                if (atualizou) {
+                    recarregarInterface()
+                    dialog.dismiss()
+                    Toast.makeText(
+                        this,
+                        "Fixo atualizado para as próximas projeções",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Não foi possível atualizar o fixo.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                AlertDialog.Builder(this)
+                    .setTitle("Desativar lançamento fixo?")
+                    .setMessage(
+                        "O histórico realizado será mantido e as projeções pendentes futuras serão removidas."
+                    )
+                    .setPositiveButton("Desativar") { _, _ ->
+                        desativarRecorrencia(recorrencia.id)
+                        dialog.dismiss()
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
+            }
+        }
+
+        dialog.show()
     }
 
     private fun desativarRecorrencia(recorrenciaId: Long) {
@@ -369,7 +539,7 @@ class MainActivity : Activity() {
             recarregarInterface()
             Toast.makeText(
                 this,
-                "Fixo desativado. O histórico foi mantido.",
+                "Fixo desativado. Histórico mantido e projeções futuras removidas.",
                 Toast.LENGTH_SHORT
             ).show()
         } else {
@@ -600,6 +770,7 @@ class MainActivity : Activity() {
         monthStateText.text = estadoDoMes(mesSelecionado)
         carregarMovimentacoes()
         atualizarResumo()
+        atualizarResumoCategorias()
         renderizarMovimentacoes()
     }
 
@@ -671,15 +842,78 @@ class MainActivity : Activity() {
         )
     }
 
+    private fun atualizarResumoCategorias() {
+        val gastosPorCategoria = movimentacoes
+            .filter { it.tipo == TipoMovimentacao.GASTO }
+            .groupBy { it.categoria }
+            .mapValues { (_, itens) -> itens.sumOf { it.valorCentavos } }
+            .entries
+            .sortedByDescending { it.value }
+
+        categorySummaryText.text = if (gastosPorCategoria.isEmpty()) {
+            "Sem gastos previstos neste mês."
+        } else {
+            gastosPorCategoria.joinToString("\n") { (categoria, total) ->
+                "${categoria}  •  ${formatarMoeda(total)}"
+            }
+        }
+    }
+
+    private fun movimentacoesFiltradas(): List<Movimentacao> {
+        val busca = movementSearchInput.text
+            ?.toString()
+            ?.trim()
+            ?.lowercase(localeBrasil)
+            .orEmpty()
+
+        val tipoFiltro = filterTypeSpinner.selectedItemPosition
+        val statusFiltro = filterStatusSpinner.selectedItemPosition
+        val categoriaFiltro =
+            filterCategorySpinner.selectedItem?.toString() ?: "Todas categorias"
+
+        return movimentacoes.filter { movimentacao ->
+            val correspondeBusca = busca.isBlank() ||
+                movimentacao.descricao.lowercase(localeBrasil).contains(busca) ||
+                movimentacao.categoria.lowercase(localeBrasil).contains(busca)
+
+            val correspondeTipo = when (tipoFiltro) {
+                1 -> movimentacao.tipo == TipoMovimentacao.GASTO
+                2 -> movimentacao.tipo == TipoMovimentacao.GANHO
+                else -> true
+            }
+
+            val correspondeStatus = when (statusFiltro) {
+                1 -> movimentacao.status == StatusMovimentacao.REALIZADO
+                2 -> movimentacao.status == StatusMovimentacao.PENDENTE
+                else -> true
+            }
+
+            val correspondeCategoria =
+                categoriaFiltro == "Todas categorias" ||
+                    movimentacao.categoria == categoriaFiltro
+
+            correspondeBusca &&
+                correspondeTipo &&
+                correspondeStatus &&
+                correspondeCategoria
+        }
+    }
+
     private fun renderizarMovimentacoes() {
         movementsContainer.removeAllViews()
 
-        emptyStateText.visibility = if (movimentacoes.isEmpty()) View.VISIBLE else View.GONE
+        val filtradas = movimentacoesFiltradas()
+        emptyStateText.visibility = if (filtradas.isEmpty()) View.VISIBLE else View.GONE
+        emptyStateText.text = if (movimentacoes.isEmpty()) {
+            getString(R.string.empty_state_month)
+        } else {
+            getString(R.string.empty_state_filtered)
+        }
 
         val inflater = LayoutInflater.from(this)
         val dateFormatter = DateTimeFormatter.ofPattern("dd/MM • HH:mm", localeBrasil)
 
-        movimentacoes.forEach { movimentacao ->
+        filtradas.forEach { movimentacao ->
             val row = inflater.inflate(
                 R.layout.item_movimentacao,
                 movementsContainer,

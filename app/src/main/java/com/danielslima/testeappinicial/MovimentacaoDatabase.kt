@@ -242,17 +242,89 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         return resultado
     }
 
-    fun desativarRecorrencia(id: Long): Boolean {
-        val values = ContentValues().apply {
-            put(COLUNA_ATIVA, 0)
-        }
+    fun atualizarRecorrencia(
+        id: Long,
+        tipo: TipoMovimentacao,
+        descricao: String,
+        valorCentavos: Long,
+        diaMes: Int,
+        categoria: String
+    ): Boolean {
+        val db = writableDatabase
+        db.beginTransaction()
 
-        return writableDatabase.update(
-            TABELA_RECORRENCIAS,
-            values,
-            "$COLUNA_ID = ?",
-            arrayOf(id.toString())
-        ) > 0
+        return try {
+            val values = ContentValues().apply {
+                put(COLUNA_TIPO, tipo.name)
+                put(COLUNA_DESCRICAO, descricao)
+                put(COLUNA_VALOR_CENTAVOS, valorCentavos)
+                put(COLUNA_DIA_MES, diaMes)
+                put(COLUNA_CATEGORIA, categoria)
+            }
+
+            val atualizou = db.update(
+                TABELA_RECORRENCIAS,
+                values,
+                "$COLUNA_ID = ?",
+                arrayOf(id.toString())
+            ) > 0
+
+            if (atualizou) {
+                excluirProjecoesPendentes(db, id)
+                db.setTransactionSuccessful()
+            }
+
+            atualizou
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun desativarRecorrencia(id: Long): Boolean {
+        val db = writableDatabase
+        db.beginTransaction()
+
+        return try {
+            val values = ContentValues().apply {
+                put(COLUNA_ATIVA, 0)
+            }
+
+            val desativou = db.update(
+                TABELA_RECORRENCIAS,
+                values,
+                "$COLUNA_ID = ?",
+                arrayOf(id.toString())
+            ) > 0
+
+            if (desativou) {
+                excluirProjecoesPendentes(db, id)
+                db.setTransactionSuccessful()
+            }
+
+            desativou
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    private fun excluirProjecoesPendentes(
+        db: SQLiteDatabase,
+        recorrenciaId: Long
+    ) {
+        val inicioMesAtual = YearMonth.now()
+            .atDay(1)
+            .atStartOfDay()
+            .toString()
+
+        db.delete(
+            TABELA_MOVIMENTACOES,
+            "$COLUNA_RECORRENCIA_ID = ? AND $COLUNA_STATUS = ? AND $COLUNA_DATA >= ?",
+            arrayOf(
+                recorrenciaId.toString(),
+                StatusMovimentacao.PENDENTE.name,
+                inicioMesAtual
+            )
+        )
     }
 
     fun garantirRecorrenciasParaMes(mes: YearMonth) {

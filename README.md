@@ -28,7 +28,7 @@ O app separa saldo inicial, saldo realizado, saldo previsto, recebido, pago, a r
 
 ## Build
 
-O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.9.0.apk`.
+O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.10.0.apk`.
 
 ## Estado
 
@@ -41,3 +41,14 @@ A versão 0.9.0 adiciona categorias às movimentações e aos lançamentos fixos
 Categorias iniciais: Alimentação, Transporte, Casa, Lazer, Saúde, Compras, Salário e Outros.
 
 Próximas versões podem usar essas categorias para filtros, gráficos, exportação e backup.
+
+
+## Versão 0.10.0
+
+- Fixos mensais aparecem também em meses futuros como projeções pendentes.
+- O saldo previsto considera essas projeções sem alterar o saldo realizado.
+- Busca por nome ou categoria.
+- Filtros por tipo, status e categoria.
+- Resumo de gastos previstos por categoria.
+- Regras de lançamentos fixos podem ser editadas.
+- Editar ou desativar um fixo preserva o histórico já realizado e atualiza/remove somente projeções pendentes atuais e futuras.
