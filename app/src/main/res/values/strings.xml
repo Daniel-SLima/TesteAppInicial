@@ -30,7 +30,8 @@
     <string name="to_pay_total">A pagar</string>
     <string name="carry_balance">Levar saldo realizado para o próximo mês</string>
     <string name="category_summary">Gastos previstos por categoria</string>
-    <string name="category_summary_hint">Inclui gastos pagos e pendentes deste mês.</string>
+    <string name="category_summary_hint">Inclui gastos pagos e pendentes deste mês. Quando houver orçamento, a barra compara gasto previsto e limite mensal.</string>
+    <string name="manage_budgets">Definir orçamentos mensais</string>
     <string name="export_csv">Exportar CSV do mês</string>
     <string name="create_backup">Criar backup</string>
     <string name="restore_backup">Restaurar backup</string>

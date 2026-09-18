@@ -20,6 +20,7 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
     override fun onCreate(db: SQLiteDatabase) {
         criarTabelaMovimentacoes(db)
         criarTabelaRecorrencias(db)
+        criarTabelaOrcamentos(db)
         criarIndices(db)
     }
 
@@ -61,6 +62,10 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                 "ALTER TABLE $TABELA_MOVIMENTACOES ADD COLUMN $COLUNA_PARCELAS_TOTAL INTEGER"
             )
         }
+
+        if (oldVersion < 6) {
+            criarTabelaOrcamentos(db)
+        }
     }
 
     private fun criarTabelaMovimentacoes(db: SQLiteDatabase) {
@@ -96,6 +101,18 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                 $COLUNA_INICIO_MES TEXT NOT NULL,
                 $COLUNA_ATIVA INTEGER NOT NULL DEFAULT 1,
                 $COLUNA_CATEGORIA TEXT NOT NULL DEFAULT 'Outros'
+            )
+            """.trimIndent()
+        )
+    }
+
+    private fun criarTabelaOrcamentos(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS $TABELA_ORCAMENTOS (
+                $COLUNA_CATEGORIA TEXT PRIMARY KEY,
+                $COLUNA_LIMITE_CENTAVOS INTEGER NOT NULL
+                    CHECK ($COLUNA_LIMITE_CENTAVOS > 0)
             )
             """.trimIndent()
         )
@@ -479,6 +496,61 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         )
     }
 
+    fun salvarOrcamento(
+        categoria: String,
+        limiteCentavos: Long
+    ) {
+        require(limiteCentavos > 0) {
+            "O orçamento deve ser maior que zero."
+        }
+
+        val values = ContentValues().apply {
+            put(COLUNA_CATEGORIA, categoria)
+            put(COLUNA_LIMITE_CENTAVOS, limiteCentavos)
+        }
+
+        writableDatabase.insertWithOnConflict(
+            TABELA_ORCAMENTOS,
+            null,
+            values,
+            SQLiteDatabase.CONFLICT_REPLACE
+        )
+    }
+
+    fun removerOrcamento(categoria: String): Boolean {
+        return writableDatabase.delete(
+            TABELA_ORCAMENTOS,
+            "$COLUNA_CATEGORIA = ?",
+            arrayOf(categoria)
+        ) > 0
+    }
+
+    fun listarOrcamentos(): Map<String, Long> {
+        val resultado = linkedMapOf<String, Long>()
+
+        readableDatabase.query(
+            TABELA_ORCAMENTOS,
+            arrayOf(COLUNA_CATEGORIA, COLUNA_LIMITE_CENTAVOS),
+            null,
+            null,
+            null,
+            null,
+            "$COLUNA_CATEGORIA COLLATE NOCASE ASC"
+        ).use { cursor ->
+            val categoriaIndex =
+                cursor.getColumnIndexOrThrow(COLUNA_CATEGORIA)
+            val limiteIndex =
+                cursor.getColumnIndexOrThrow(COLUNA_LIMITE_CENTAVOS)
+
+            while (cursor.moveToNext()) {
+                resultado[cursor.getString(categoriaIndex)] =
+                    cursor.getLong(limiteIndex)
+            }
+        }
+
+        return resultado
+    }
+
     fun criarBackupJson(carregarSaldo: Boolean): String {
         val root = JSONObject().apply {
             put("formato", BACKUP_FORMAT_VERSION)
@@ -624,8 +696,34 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
             }
         }
 
+        val orcamentos = JSONArray()
+        readableDatabase.query(
+            TABELA_ORCAMENTOS,
+            arrayOf(COLUNA_CATEGORIA, COLUNA_LIMITE_CENTAVOS),
+            null,
+            null,
+            null,
+            null,
+            "$COLUNA_CATEGORIA COLLATE NOCASE ASC"
+        ).use { cursor ->
+            val categoriaIndex =
+                cursor.getColumnIndexOrThrow(COLUNA_CATEGORIA)
+            val limiteIndex =
+                cursor.getColumnIndexOrThrow(COLUNA_LIMITE_CENTAVOS)
+
+            while (cursor.moveToNext()) {
+                orcamentos.put(
+                    JSONObject().apply {
+                        put("categoria", cursor.getString(categoriaIndex))
+                        put("limiteCentavos", cursor.getLong(limiteIndex))
+                    }
+                )
+            }
+        }
+
         root.put("recorrencias", recorrencias)
         root.put("movimentacoes", movimentacoes)
+        root.put("orcamentos", orcamentos)
         return root.toString(2)
     }
 
@@ -638,6 +736,7 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
 
         val recorrencias = root.getJSONArray("recorrencias")
         val movimentacoes = root.getJSONArray("movimentacoes")
+        val orcamentos = root.optJSONArray("orcamentos") ?: JSONArray()
         val carregarSaldo = root.optBoolean("carregarSaldo", true)
 
         val db = writableDatabase
@@ -646,6 +745,7 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         try {
             db.delete(TABELA_MOVIMENTACOES, null, null)
             db.delete(TABELA_RECORRENCIAS, null, null)
+            db.delete(TABELA_ORCAMENTOS, null, null)
 
             for (index in 0 until recorrencias.length()) {
                 val item = recorrencias.getJSONObject(index)
@@ -713,6 +813,21 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                 }
 
                 db.insertOrThrow(TABELA_MOVIMENTACOES, null, values)
+            }
+
+            for (index in 0 until orcamentos.length()) {
+                val item = orcamentos.getJSONObject(index)
+                val limite = item.getLong("limiteCentavos")
+                require(limite > 0) {
+                    "Orçamento inválido no backup."
+                }
+
+                val values = ContentValues().apply {
+                    put(COLUNA_CATEGORIA, item.getString("categoria"))
+                    put(COLUNA_LIMITE_CENTAVOS, limite)
+                }
+
+                db.insertOrThrow(TABELA_ORCAMENTOS, null, values)
             }
 
             db.setTransactionSuccessful()
@@ -833,11 +948,12 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
 
     companion object {
         private const val DATABASE_NAME = "entrou_saiu.db"
-        private const val DATABASE_VERSION = 5
-        private const val BACKUP_FORMAT_VERSION = 2
+        private const val DATABASE_VERSION = 6
+        private const val BACKUP_FORMAT_VERSION = 3
 
         private const val TABELA_MOVIMENTACOES = "movimentacoes"
         private const val TABELA_RECORRENCIAS = "recorrencias"
+        private const val TABELA_ORCAMENTOS = "orcamentos_categoria"
 
         private const val COLUNA_ID = "id"
         private const val COLUNA_TIPO = "tipo"
@@ -854,5 +970,6 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         private const val COLUNA_DIA_MES = "dia_mes"
         private const val COLUNA_INICIO_MES = "inicio_mes"
         private const val COLUNA_ATIVA = "ativa"
+        private const val COLUNA_LIMITE_CENTAVOS = "limite_centavos"
     }
 }

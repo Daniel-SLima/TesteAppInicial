@@ -28,7 +28,7 @@ O app separa saldo inicial, saldo realizado, saldo previsto, recebido, pago, a r
 
 ## Build
 
-O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.14.0.apk`.
+O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.15.0.apk`.
 
 ## Estado
 
@@ -103,3 +103,13 @@ Sem os Secrets, o workflow continua verde, mas gera um APK explicitamente marcad
 - Quando ativada, o FinTest exige a confirmação do PIN, padrão ou senha do aparelho ao voltar do segundo plano.
 - O FinTest não armazena o PIN/senha do aparelho.
 - A preferência de proteção não é restaurada automaticamente por backup, evitando bloquear o app em outro aparelho sem confirmação do usuário.
+
+
+## Versão 0.15.0
+
+- Orçamento mensal recorrente por categoria.
+- Cada categoria pode ter um limite próprio ou permanecer sem limite.
+- O painel mostra gasto previsto, limite, valor restante e excesso de orçamento.
+- Categorias com orçamento aparecem mesmo sem gastos no mês.
+- Orçamentos podem ser alterados ou removidos a qualquer momento.
+- Backup v3 inclui os orçamentos e continua aceitando backups v1/v2.

@@ -559,6 +559,16 @@
             </LinearLayout>
 
             <Button
+                android:id="@+id/manageBudgetsButton"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="10dp"
+                android:backgroundTint="@color/unselected"
+                android:text="@string/manage_budgets"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold" />
+
+            <Button
                 android:id="@+id/exportCsvButton"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"

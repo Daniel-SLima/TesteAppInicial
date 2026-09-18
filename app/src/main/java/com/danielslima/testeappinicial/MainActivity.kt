@@ -203,6 +203,10 @@ class MainActivity : Activity() {
             abrirGerenciadorFixos()
         }
 
+        findViewById<Button>(R.id.manageBudgetsButton).setOnClickListener {
+            abrirGerenciadorOrcamentos()
+        }
+
         findViewById<Button>(R.id.exportCsvButton).setOnClickListener {
             iniciarExportacaoCsv()
         }
@@ -1051,23 +1055,39 @@ class MainActivity : Activity() {
             .filter { it.tipo == TipoMovimentacao.GASTO }
             .groupBy { it.categoria }
             .mapValues { (_, itens) -> itens.sumOf { it.valorCentavos } }
-            .entries
-            .sortedByDescending { it.value }
+
+        val orcamentos = try {
+            database.listarOrcamentos()
+        } catch (erro: SQLiteException) {
+            emptyMap()
+        }
+
+        val categoriasExibidas = (
+            gastosPorCategoria.keys + orcamentos.keys
+        )
+            .distinct()
+            .sortedByDescending { gastosPorCategoria[it] ?: 0L }
 
         categoryChartContainer.removeAllViews()
 
-        if (gastosPorCategoria.isEmpty()) {
+        if (categoriasExibidas.isEmpty()) {
             categorySummaryText.text = "Sem gastos previstos neste mês."
             return
         }
 
-        val totalGastos = gastosPorCategoria.sumOf { it.value }
-        val maiorValor = gastosPorCategoria.maxOf { it.value }.coerceAtLeast(1L)
-
+        val totalGastos = gastosPorCategoria.values.sum()
         categorySummaryText.text =
             "Total de gastos do mês: ${formatarMoeda(totalGastos)}"
 
-        gastosPorCategoria.forEach { (categoria, total) ->
+        val maiorValorSemOrcamento = gastosPorCategoria.values
+            .maxOrNull()
+            ?.coerceAtLeast(1L)
+            ?: 1L
+
+        categoriasExibidas.forEach { categoria ->
+            val total = gastosPorCategoria[categoria] ?: 0L
+            val limite = orcamentos[categoria]
+
             val bloco = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(0, 0, 0, dp(14))
@@ -1092,9 +1112,21 @@ class MainActivity : Activity() {
             )
 
             val valor = TextView(this).apply {
-                text = formatarMoeda(total)
+                text = if (limite != null) {
+                    "${formatarMoeda(total)} / ${formatarMoeda(limite)}"
+                } else {
+                    formatarMoeda(total)
+                }
                 textSize = 14f
-                setTextColor(getColor(R.color.expense))
+                setTextColor(
+                    getColor(
+                        if (limite != null && total > limite) {
+                            R.color.expense
+                        } else {
+                            R.color.text_primary
+                        }
+                    )
+                )
             }
             cabecalho.addView(valor)
 
@@ -1104,10 +1136,25 @@ class MainActivity : Activity() {
                 android.R.attr.progressBarStyleHorizontal
             ).apply {
                 max = 1000
-                progress = ((total * 1000L) / maiorValor)
-                    .toInt()
-                    .coerceIn(0, 1000)
-                progressTintList = ColorStateList.valueOf(getColor(R.color.expense))
+                progress = if (limite != null) {
+                    ((total * 1000L) / limite.coerceAtLeast(1L))
+                        .toInt()
+                        .coerceIn(0, 1000)
+                } else {
+                    ((total * 1000L) / maiorValorSemOrcamento)
+                        .toInt()
+                        .coerceIn(0, 1000)
+                }
+
+                progressTintList = ColorStateList.valueOf(
+                    getColor(
+                        if (limite != null && total > limite) {
+                            R.color.expense
+                        } else {
+                            R.color.accent
+                        }
+                    )
+                )
                 progressBackgroundTintList =
                     ColorStateList.valueOf(getColor(R.color.unselected))
             }
@@ -1123,8 +1170,170 @@ class MainActivity : Activity() {
                 }
             )
 
+            if (limite != null) {
+                val diferenca = limite - total
+                val detalhe = TextView(this).apply {
+                    text = if (diferenca >= 0) {
+                        "Restam ${formatarMoeda(diferenca)} neste mês"
+                    } else {
+                        "Orçamento excedido em ${formatarMoeda(-diferenca)}"
+                    }
+                    textSize = 12f
+                    setTextColor(
+                        getColor(
+                            if (diferenca >= 0) {
+                                R.color.text_secondary
+                            } else {
+                                R.color.expense
+                            }
+                        )
+                    )
+                }
+
+                bloco.addView(
+                    detalhe,
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = dp(4)
+                    }
+                )
+            }
+
             categoryChartContainer.addView(bloco)
         }
+    }
+
+    private fun abrirGerenciadorOrcamentos() {
+        val orcamentos = try {
+            database.listarOrcamentos()
+        } catch (erro: SQLiteException) {
+            Toast.makeText(
+                this,
+                "Não foi possível carregar os orçamentos.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val itens = CATEGORIAS.map { categoria ->
+            val limite = orcamentos[categoria]
+            if (limite == null) {
+                "$categoria • Sem limite"
+            } else {
+                "$categoria • ${formatarMoeda(limite)}/mês"
+            }
+        }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Orçamentos mensais")
+            .setMessage("Escolha uma categoria para definir ou alterar o limite.")
+            .setItems(itens) { _, position ->
+                val categoria = CATEGORIAS[position]
+                abrirEditorOrcamento(
+                    categoria,
+                    orcamentos[categoria]
+                )
+            }
+            .setNegativeButton("Fechar", null)
+            .show()
+    }
+
+    private fun abrirEditorOrcamento(
+        categoria: String,
+        limiteAtual: Long?
+    ) {
+        val input = EditText(this).apply {
+            hint = "R$ 0,00"
+            inputType =
+                android.text.InputType.TYPE_CLASS_NUMBER or
+                    android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setPadding(dp(14), 0, dp(14), 0)
+            setBackgroundResource(R.drawable.bg_input)
+
+            if (limiteAtual != null) {
+                setText(formatarValorParaEdicao(limiteAtual))
+            }
+        }
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(8), dp(24), 0)
+
+            addView(
+                input,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(52)
+                )
+            )
+        }
+
+        val builder = AlertDialog.Builder(this)
+            .setTitle("Orçamento: $categoria")
+            .setMessage("Defina o limite mensal desta categoria.")
+            .setView(container)
+            .setPositiveButton("Salvar", null)
+            .setNegativeButton("Cancelar", null)
+
+        if (limiteAtual != null) {
+            builder.setNeutralButton("Remover", null)
+        }
+
+        val dialog = builder.create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val limite = parseValorCentavos(input.text.toString())
+
+                if (limite == null || limite <= 0) {
+                    input.error = "Digite um valor maior que zero"
+                    input.requestFocus()
+                    return@setOnClickListener
+                }
+
+                try {
+                    database.salvarOrcamento(categoria, limite)
+                    atualizarResumoCategorias()
+                    dialog.dismiss()
+                    Toast.makeText(
+                        this,
+                        "Orçamento de $categoria atualizado",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } catch (erro: Exception) {
+                    Toast.makeText(
+                        this,
+                        "Não foi possível salvar o orçamento.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+
+            if (limiteAtual != null) {
+                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                    try {
+                        database.removerOrcamento(categoria)
+                        atualizarResumoCategorias()
+                        dialog.dismiss()
+                        Toast.makeText(
+                            this,
+                            "Orçamento de $categoria removido",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } catch (erro: SQLiteException) {
+                        Toast.makeText(
+                            this,
+                            "Não foi possível remover o orçamento.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
+        }
+
+        dialog.show()
     }
 
     @Suppress("DEPRECATION")
