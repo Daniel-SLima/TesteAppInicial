@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 fail(){ echo "ERRO: $1"; exit 1; }
-grep -q 'versionName = "1.0.0-alpha05"' app/build.gradle.kts || fail "versionName Alpha 05 incorreto"
-grep -q 'versionCode = 25' app/build.gradle.kts || fail "versionCode Alpha 05 incorreto"
+grep -q 'versionName = "1.0.0-alpha06"' app/build.gradle.kts || fail "versionName Alpha 06 incorreto"
+grep -q 'versionCode = 26' app/build.gradle.kts || fail "versionCode Alpha 06 incorreto"
 grep -q 'applicationId = "com.danielslima.testeappinicial"' app/build.gradle.kts || fail "applicationId mudou"
 for file in app/src/main/res/layout/dialog_vira_budget_manager.xml app/src/main/res/layout/dialog_vira_budget_editor.xml app/src/main/res/drawable/vira_checkbox.xml app/src/main/res/drawable/vira_dialog_surface.xml; do test -f "$file" || fail "arquivo $file ausente"; done
 grep -q 'android:button="@drawable/vira_checkbox"' app/src/main/res/layout/activity_main.xml || fail "checkbox Vira não aplicado"
@@ -40,4 +40,9 @@ test -f app/src/main/java/com/danielslima/testeappinicial/ViraReminderReceiver.k
 test -f app/src/main/java/com/danielslima/testeappinicial/ViraBootReceiver.kt || fail "receiver de boot ausente"
 if grep -q 'Movimentação atualizada' app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt; then fail "toast de atualização ainda presente"; fi
 if grep -q 'take(4)' app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt; then fail "gráfico de categorias ainda truncado"; fi
-echo "Vira Alpha 05: notificações e refinamentos validados"
+grep -q 'feedbackBanner' app/src/main/res/layout/activity_main.xml || fail "feedback próprio do Vira ausente"
+grep -q 'mostrarFeedbackVira' app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt || fail "helper de feedback próprio ausente"
+for texto in 'Fixo atualizado para as próximas projeções' 'Fixo desativado. Histórico mantido e projeções futuras removidas.' 'Backup do Vira criado com sucesso' 'Backup restaurado com sucesso'; do
+  if grep -q "$texto" app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt; then fail "toast de sucesso antigo ainda presente: $texto"; fi
+done
+echo "Vira Alpha 06: feedback próprio e polimento de sucesso validados"

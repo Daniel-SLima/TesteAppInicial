@@ -46,6 +46,7 @@ class MainActivity : Activity() {
     private lateinit var database: MovimentacaoDatabase
     private lateinit var preferencias: SharedPreferences
     private lateinit var screenHost: View
+    private lateinit var feedbackBanner: TextView
     private lateinit var mainScroll: ScrollView
     private lateinit var expenseButton: Button
     private lateinit var incomeButton: Button
@@ -124,6 +125,7 @@ class MainActivity : Activity() {
     private var filtroCategoria = "Todas categorias"
     private var categoriaNovoLancamento = "Outros"
     private var dialogNovoLancamento: AlertDialog? = null
+    private var feedbackHideRunnable: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -133,6 +135,7 @@ class MainActivity : Activity() {
         preferencias = getSharedPreferences(PREFERENCIAS, MODE_PRIVATE)
 
         screenHost = findViewById(R.id.screenHost)
+        feedbackBanner = findViewById(R.id.feedbackBanner)
         aplicarInsetsSistema()
 
         mainScroll = findViewById(R.id.mainScroll)
@@ -538,6 +541,34 @@ class MainActivity : Activity() {
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+
+    private fun mostrarFeedbackVira(mensagem: String) {
+        feedbackHideRunnable?.let { feedbackBanner.removeCallbacks(it) }
+        feedbackBanner.animate().cancel()
+
+        feedbackBanner.text = "✓ $mensagem"
+        feedbackBanner.alpha = 0f
+        feedbackBanner.visibility = View.VISIBLE
+        feedbackBanner.announceForAccessibility(mensagem)
+        feedbackBanner.animate()
+            .alpha(1f)
+            .setDuration(140L)
+            .start()
+
+        val esconder = Runnable {
+            feedbackBanner.animate()
+                .alpha(0f)
+                .setDuration(180L)
+                .withEndAction {
+                    feedbackBanner.visibility = View.GONE
+                    feedbackBanner.alpha = 1f
+                }
+                .start()
+        }
+
+        feedbackHideRunnable = esconder
+        feedbackBanner.postDelayed(esconder, 1800L)
     }
 
     private fun aplicarInsetsSistema() {
@@ -1480,11 +1511,7 @@ class MainActivity : Activity() {
                 if (atualizou) {
                     recarregarInterface()
                     dialog.dismiss()
-                    Toast.makeText(
-                        this,
-                        "Fixo atualizado para as próximas projeções",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    mostrarFeedbackVira("Fixo atualizado")
                 } else {
                     Toast.makeText(
                         this,
@@ -1521,11 +1548,7 @@ class MainActivity : Activity() {
 
         if (desativou) {
             recarregarInterface()
-            Toast.makeText(
-                this,
-                "Fixo desativado. Histórico mantido e projeções futuras removidas.",
-                Toast.LENGTH_SHORT
-            ).show()
+            mostrarFeedbackVira("Fixo desativado")
         } else {
             Toast.makeText(
                 this,
@@ -2751,11 +2774,7 @@ class MainActivity : Activity() {
                 database.salvarOrcamento(categoria, limite)
                 recarregarInterface()
                 dialog.dismiss()
-                Toast.makeText(
-                    this,
-                    "Orçamento de $categoria atualizado",
-                    Toast.LENGTH_SHORT
-                ).show()
+                mostrarFeedbackVira("Orçamento atualizado")
                 abrirGerenciadorOrcamentos()
             } catch (erro: Exception) {
                 Toast.makeText(
@@ -2771,11 +2790,7 @@ class MainActivity : Activity() {
                 database.removerOrcamento(categoria)
                 recarregarInterface()
                 dialog.dismiss()
-                Toast.makeText(
-                    this,
-                    "Limite de $categoria removido",
-                    Toast.LENGTH_SHORT
-                ).show()
+                mostrarFeedbackVira("Limite removido")
                 abrirGerenciadorOrcamentos()
             } catch (erro: SQLiteException) {
                 Toast.makeText(
@@ -2868,11 +2883,7 @@ class MainActivity : Activity() {
                 writer.write(conteudo)
             }
 
-            Toast.makeText(
-                this,
-                "Backup do Vira criado com sucesso",
-                Toast.LENGTH_LONG
-            ).show()
+            mostrarFeedbackVira("Backup criado")
         } catch (erro: Exception) {
             Toast.makeText(
                 this,
@@ -2931,11 +2942,7 @@ class MainActivity : Activity() {
             mesSelecionado = YearMonth.now()
             recarregarInterface()
 
-            Toast.makeText(
-                this,
-                "Backup restaurado com sucesso",
-                Toast.LENGTH_LONG
-            ).show()
+            mostrarFeedbackVira("Backup restaurado")
         } catch (erro: Exception) {
             Toast.makeText(
                 this,
@@ -3031,11 +3038,7 @@ class MainActivity : Activity() {
                     }
             }
 
-            Toast.makeText(
-                this,
-                "CSV de ${formatarMes(mes)} exportado",
-                Toast.LENGTH_LONG
-            ).show()
+            mostrarFeedbackVira("CSV de ${formatarMes(mes)} exportado")
         } catch (erro: Exception) {
             Toast.makeText(
                 this,
