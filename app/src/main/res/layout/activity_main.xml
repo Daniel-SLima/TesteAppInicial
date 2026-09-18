@@ -8,7 +8,8 @@
         android:id="@+id/screenHost"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginBottom="76dp">
+        android:layout_marginBottom="76dp"
+        android:paddingTop="12dp">
 
         <ScrollView
             android:id="@+id/homeScreen"
@@ -87,7 +88,12 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
                         android:gravity="center"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
                         android:textColor="@color/text_primary"
                         android:textSize="24sp"
                         android:textStyle="bold" />
@@ -484,8 +490,26 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
+                            android:background="?android:attr/selectableItemBackgroundBorderless"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/movementsCurrentMonthAction"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:text="@string/back_to_current_month"
+                            android:textColor="@color/brand_secondary"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:visibility="gone" />
                     </LinearLayout>
 
                     <TextView
@@ -701,7 +725,12 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
                         android:gravity="center"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
                         android:textColor="@color/text_primary"
                         android:textSize="17sp"
                         android:textStyle="bold" />
@@ -719,6 +748,20 @@
                         android:textSize="23sp"
                         android:textStyle="bold" />
                 </LinearLayout>
+
+                <TextView
+                    android:id="@+id/planningCurrentMonthAction"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="@string/back_to_current_month"
+                    android:textColor="@color/brand_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -1163,7 +1206,7 @@
 
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/brand_public_name" android:textColor="@color/text_primary" android:textSize="16sp" android:textStyle="bold" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/brand_tagline" android:textColor="@color/text_secondary" android:textSize="12sp" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="1.0.0 Alpha 04" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="1.0.0 Alpha 04.1" android:textColor="@color/text_secondary" android:textSize="11sp" />
                 </LinearLayout>
             </LinearLayout>
         </ScrollView>

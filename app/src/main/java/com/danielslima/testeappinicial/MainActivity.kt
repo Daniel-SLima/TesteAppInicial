@@ -87,6 +87,8 @@ class MainActivity : Activity() {
     private lateinit var homeBudgetProgressText: TextView
     private lateinit var movementsMonthText: TextView
     private lateinit var planningMonthText: TextView
+    private lateinit var movementsCurrentMonthAction: TextView
+    private lateinit var planningCurrentMonthAction: TextView
     private lateinit var planningMonthNetText: TextView
     private lateinit var planningIncomeExpectedText: TextView
     private lateinit var planningExpenseExpectedText: TextView
@@ -154,6 +156,10 @@ class MainActivity : Activity() {
         homeBudgetProgressText = findViewById(R.id.homeBudgetProgressText)
         movementsMonthText = findViewById(R.id.movementsMonthText)
         planningMonthText = findViewById(R.id.planningMonthText)
+        movementsCurrentMonthAction =
+            findViewById(R.id.movementsCurrentMonthAction)
+        planningCurrentMonthAction =
+            findViewById(R.id.planningCurrentMonthAction)
         planningMonthNetText = findViewById(R.id.planningMonthNetText)
         planningIncomeExpectedText = findViewById(R.id.planningIncomeExpectedText)
         planningExpenseExpectedText = findViewById(R.id.planningExpenseExpectedText)
@@ -258,6 +264,32 @@ class MainActivity : Activity() {
         findViewById<TextView>(R.id.planningNextMonthButton).setOnClickListener {
             mesSelecionado = mesSelecionado.plusMonths(1)
             recarregarInterface()
+        }
+
+        monthText.setOnClickListener {
+            abrirSeletorMes()
+        }
+
+        movementsMonthText.setOnClickListener {
+            abrirSeletorMes()
+        }
+
+        planningMonthText.setOnClickListener {
+            abrirSeletorMes()
+        }
+
+        monthStateText.setOnClickListener {
+            if (mesSelecionado != YearMonth.now()) {
+                voltarParaMesAtual()
+            }
+        }
+
+        movementsCurrentMonthAction.setOnClickListener {
+            voltarParaMesAtual()
+        }
+
+        planningCurrentMonthAction.setOnClickListener {
+            voltarParaMesAtual()
         }
 
         findViewById<TextView>(R.id.newMovementButton).setOnClickListener {
@@ -404,6 +436,143 @@ class MainActivity : Activity() {
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+
+    private fun voltarParaMesAtual() {
+        mesSelecionado = YearMonth.now()
+        recarregarInterface()
+    }
+
+    private fun abrirSeletorMes() {
+        val view = layoutInflater.inflate(
+            R.layout.dialog_vira_month_picker,
+            null
+        )
+        val yearText =
+            view.findViewById<TextView>(R.id.monthPickerYearText)
+        val monthsContainer =
+            view.findViewById<LinearLayout>(R.id.monthPickerMonthsContainer)
+        val previousYear =
+            view.findViewById<TextView>(R.id.monthPickerPreviousYear)
+        val nextYear =
+            view.findViewById<TextView>(R.id.monthPickerNextYear)
+        val currentMonthButton =
+            view.findViewById<TextView>(R.id.monthPickerCurrentButton)
+        val closeButton =
+            view.findViewById<TextView>(R.id.monthPickerCloseButton)
+
+        var anoExibido = mesSelecionado.year
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+
+        fun renderizarMeses() {
+            yearText.text = anoExibido.toString()
+            monthsContainer.removeAllViews()
+
+            val formatoMes = DateTimeFormatter.ofPattern(
+                "MMM",
+                localeBrasil
+            )
+
+            for (linhaIndex in 0 until 4) {
+                val linha = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                }
+
+                for (coluna in 0 until 3) {
+                    val numeroMes = linhaIndex * 3 + coluna + 1
+                    val mes = YearMonth.of(anoExibido, numeroMes)
+                    val selecionado = mes == mesSelecionado
+
+                    val opcao = TextView(this).apply {
+                        text = mes.atDay(1)
+                            .format(formatoMes)
+                            .replaceFirstChar {
+                                it.uppercase(localeBrasil)
+                            }
+                        gravity = android.view.Gravity.CENTER
+                        textSize = 13f
+                        setTypeface(
+                            typeface,
+                            android.graphics.Typeface.BOLD
+                        )
+                        setTextColor(
+                            getColor(
+                                if (selecionado) {
+                                    R.color.white
+                                } else {
+                                    R.color.text_primary
+                                }
+                            )
+                        )
+                        setBackgroundResource(
+                            if (selecionado) {
+                                R.drawable.vira_month_picker_selected
+                            } else {
+                                R.drawable.vira_month_picker_option
+                            }
+                        )
+                        isClickable = true
+                        isFocusable = true
+                        setOnClickListener {
+                            mesSelecionado = mes
+                            recarregarInterface()
+                            dialog.dismiss()
+                        }
+                    }
+
+                    linha.addView(
+                        opcao,
+                        LinearLayout.LayoutParams(
+                            0,
+                            dp(48),
+                            1f
+                        ).apply {
+                            if (coluna > 0) {
+                                marginStart = dp(8)
+                            }
+                        }
+                    )
+                }
+
+                monthsContainer.addView(
+                    linha,
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        if (linhaIndex > 0) {
+                            topMargin = dp(8)
+                        }
+                    }
+                )
+            }
+        }
+
+        previousYear.setOnClickListener {
+            anoExibido -= 1
+            renderizarMeses()
+        }
+
+        nextYear.setOnClickListener {
+            anoExibido += 1
+            renderizarMeses()
+        }
+
+        currentMonthButton.setOnClickListener {
+            voltarParaMesAtual()
+            dialog.dismiss()
+        }
+
+        closeButton.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        renderizarMeses()
+        dialog.show()
+        aplicarEstiloDialogVira(dialog)
     }
 
     private fun selecionarSecao(secao: ViraSection) {
@@ -817,17 +986,8 @@ class MainActivity : Activity() {
             mesSelecionado = YearMonth.from(primeiraParcela.data)
         }
 
-        limparFormulario()
         recarregarInterface()
-        dialogNovoLancamento?.dismiss()
-        dialogNovoLancamento = null
-
-        Toast.makeText(
-            this,
-            "Parcelamento criado em $quantidade parcelas",
-            Toast.LENGTH_SHORT
-        ).show()
-        rolarParaHistorico()
+        finalizarNovoLancamento()
     }
 
     private fun registrarMovimentacaoUnica(
@@ -852,13 +1012,8 @@ class MainActivity : Activity() {
         }
 
         mesSelecionado = YearMonth.from(novaMovimentacao.data)
-        limparFormulario()
         recarregarInterface()
-        dialogNovoLancamento?.dismiss()
-        dialogNovoLancamento = null
-
-        Toast.makeText(this, "Movimentação salva no aparelho", Toast.LENGTH_SHORT).show()
-        rolarParaHistorico()
+        finalizarNovoLancamento()
     }
 
     private fun registrarRecorrencia(
@@ -894,13 +1049,38 @@ class MainActivity : Activity() {
         }
 
         mesSelecionado = YearMonth.now()
-        limparFormulario()
         recarregarInterface()
-        dialogNovoLancamento?.dismiss()
-        dialogNovoLancamento = null
+        finalizarNovoLancamento()
+    }
 
-        Toast.makeText(this, "Fixo mensal criado como pendente", Toast.LENGTH_SHORT).show()
-        rolarParaHistorico()
+    private fun finalizarNovoLancamento() {
+        val dialog = dialogNovoLancamento
+
+        if (dialog == null) {
+            rolarParaHistorico()
+            return
+        }
+
+        val saveButton =
+            dialog.findViewById<TextView>(R.id.newMovementSaveButton)
+
+        saveButton?.apply {
+            text = "✓ Registrado"
+            isEnabled = false
+            setBackgroundResource(R.drawable.vira_button_income)
+
+            postDelayed({
+                if (dialog.isShowing) {
+                    dialog.dismiss()
+                }
+                dialogNovoLancamento = null
+                rolarParaHistorico()
+            }, 320L)
+        } ?: run {
+            dialog.dismiss()
+            dialogNovoLancamento = null
+            rolarParaHistorico()
+        }
     }
 
     private fun limparFormulario() {
@@ -1476,10 +1656,33 @@ class MainActivity : Activity() {
 
     private fun recarregarInterface() {
         val mesFormatado = formatarMes(mesSelecionado)
-        monthText.text = mesFormatado
-        movementsMonthText.text = mesFormatado
-        planningMonthText.text = mesFormatado
-        monthStateText.text = estadoDoMes(mesSelecionado)
+        val mesAtual = YearMonth.now()
+        val foraDoMesAtual = mesSelecionado != mesAtual
+
+        monthText.text = mesFormatado + "  ▾"
+        movementsMonthText.text = mesFormatado + "  ▾"
+        planningMonthText.text = mesFormatado + "  ▾"
+
+        monthStateText.text =
+            if (foraDoMesAtual) {
+                estadoDoMes(mesSelecionado) + " • Voltar ao mês atual"
+            } else {
+                estadoDoMes(mesSelecionado)
+            }
+        monthStateText.setTextColor(
+            getColor(
+                if (foraDoMesAtual) {
+                    R.color.brand_secondary
+                } else {
+                    R.color.text_secondary
+                }
+            )
+        )
+
+        movementsCurrentMonthAction.visibility =
+            if (foraDoMesAtual) View.VISIBLE else View.GONE
+        planningCurrentMonthAction.visibility =
+            if (foraDoMesAtual) View.VISIBLE else View.GONE
 
         carregarMovimentacoes()
         atualizarResumo()

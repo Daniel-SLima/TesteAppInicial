@@ -101,4 +101,9 @@
     <string name="planning_no_commitments">Nenhum pagamento ou recebimento pendente neste mês.</string>
     <string name="planning_in_progress">Em andamento</string>
     <string name="planning_budget_hint">Mostramos aqui as categorias com maior impacto. Os limites completos ficam em Orçamentos.</string>
+    <string name="back_to_current_month">Voltar ao mês atual</string>
+    <string name="month_picker_title">Ir para outro mês</string>
+    <string name="month_picker_subtitle">Escolha o ano e depois toque no mês.</string>
+    <string name="current_month">Mês atual</string>
+    <string name="registered">✓ Registrado</string>
 </resources>
