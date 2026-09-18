@@ -1,6 +1,6 @@
-# FinTest
+# Vira
 
-Mini app Android de finanças pessoais, desenvolvido sem Android Studio.
+Aplicativo Android de finanças pessoais, local-first e offline. O projeto evoluiu do protótipo FinTest para a identidade **Vira**.
 
 ## MVP
 
@@ -28,7 +28,7 @@ O app separa saldo inicial, saldo realizado, saldo previsto, recebido, pago, a r
 
 ## Build
 
-O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.15.1.apk`.
+O GitHub Actions gera o APK assinado com a versão no nome, por exemplo `Vira-v1.0.0-alpha01.apk`.
 
 ## Estado
 
@@ -124,3 +124,23 @@ Sem os Secrets, o workflow continua verde, mas gera um APK explicitamente marcad
 - Removido o BOM UTF-8 que aparecia como `ï»¿` em alguns leitores.
 - Campos CSV continuam escapando ponto e vírgula, aspas e quebras de linha.
 - Textos que começam com `=`, `+`, `-` ou `@` são protegidos contra interpretação acidental como fórmula.
+
+
+## Vira 1.0 — Alpha 01
+
+A fase 1.0 inicia o redesign completo do produto sem remover as funcionalidades financeiras já validadas.
+
+- Nome interno do app: **Vira**.
+- Nome público/marketing: **Vira Finanças**.
+- Nova identidade visual com fundo quente, verde profundo, teal e coral funcional.
+- Símbolo vetorial próprio do Vira.
+- Ícones próprios para Início, Movimentações, Planejamento e Ajustes.
+- Navegação inferior persistente com quatro áreas.
+- Nova Home com saldo realizado, previsto, recebido, pago, a receber e a pagar.
+- Atalhos rápidos para gasto e ganho.
+- Próximos vencimentos na Home.
+- Visão compacta do orçamento mensal.
+- Movimentações, planejamento e ajustes separados por responsabilidade.
+- O package Android, SQLite e assinatura permanente permanecem os mesmos para preservar atualizações e dados.
+
+Design: `docs/superpowers/specs/2026-09-18-vira-1-0-interface-design.md`.
