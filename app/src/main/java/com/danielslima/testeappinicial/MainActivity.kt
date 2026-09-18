@@ -2,6 +2,7 @@ package com.danielslima.testeappinicial
 
 import android.app.Activity
 import android.content.res.ColorStateList
+import android.database.sqlite.SQLiteException
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -23,6 +24,7 @@ class MainActivity : Activity() {
     private val moeda = NumberFormat.getCurrencyInstance(localeBrasil)
     private val movimentacoes = mutableListOf<Movimentacao>()
 
+    private lateinit var database: MovimentacaoDatabase
     private lateinit var mainScroll: ScrollView
     private lateinit var expenseButton: Button
     private lateinit var incomeButton: Button
@@ -42,6 +44,8 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
 
         window.statusBarColor = getColor(R.color.background)
+
+        database = MovimentacaoDatabase(applicationContext)
 
         mainScroll = findViewById(R.id.mainScroll)
         expenseButton = findViewById(R.id.expenseButton)
@@ -70,8 +74,27 @@ class MainActivity : Activity() {
         }
 
         selecionarTipo(TipoMovimentacao.GASTO)
+        carregarMovimentacoes()
         atualizarResumo()
         renderizarMovimentacoes()
+    }
+
+    override fun onDestroy() {
+        database.close()
+        super.onDestroy()
+    }
+
+    private fun carregarMovimentacoes() {
+        try {
+            movimentacoes.clear()
+            movimentacoes.addAll(database.listarTodas())
+        } catch (erro: SQLiteException) {
+            Toast.makeText(
+                this,
+                "Não foi possível carregar as movimentações salvas.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     private fun selecionarTipo(tipo: TipoMovimentacao) {
@@ -113,15 +136,22 @@ class MainActivity : Activity() {
             return
         }
 
-        movimentacoes.add(
-            0,
-            Movimentacao(
-                id = System.currentTimeMillis(),
+        val novaMovimentacao = try {
+            database.inserir(
                 tipo = tipoSelecionado,
                 descricao = descricao,
                 valorCentavos = valorCentavos
             )
-        )
+        } catch (erro: SQLiteException) {
+            Toast.makeText(
+                this,
+                "Não foi possível salvar a movimentação.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        movimentacoes.add(0, novaMovimentacao)
 
         descriptionInput.text.clear()
         valueInput.text.clear()
@@ -130,7 +160,7 @@ class MainActivity : Activity() {
         atualizarResumo()
         renderizarMovimentacoes()
 
-        Toast.makeText(this, "Movimentação registrada", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Movimentação salva no aparelho", Toast.LENGTH_SHORT).show()
 
         historySection.post {
             mainScroll.smoothScrollTo(0, historySection.top)
