@@ -10,6 +10,7 @@
     <string name="description_hint">Ex.: Mercado, salário, almoço…</string>
     <string name="value_label">Valor</string>
     <string name="value_hint">R$ 0,00</string>
+    <string name="category_label">Categoria</string>
     <string name="repeat_monthly">Repetir todo mês</string>
     <string name="day_of_month">Dia do mês</string>
     <string name="day_month_hint">Em meses mais curtos, usamos automaticamente o último dia.</string>

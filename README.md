@@ -28,8 +28,16 @@ O app separa saldo inicial, saldo realizado, saldo previsto, recebido, pago, a r
 
 ## Build
 
-O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.8.0.apk`.
+O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.9.0.apk`.
 
 ## Estado
 
-A versão 0.8.0 completa o escopo funcional definido para o primeiro MVP. Próximas versões podem focar em experiência visual, categorias, filtros, gráficos, exportação e backup.
+A versão 0.8.0 completou o escopo funcional definido para o primeiro MVP.
+
+## Categorias
+
+A versão 0.9.0 adiciona categorias às movimentações e aos lançamentos fixos. Registros antigos são migrados automaticamente para **Outros**, preservando todo o histórico.
+
+Categorias iniciais: Alimentação, Transporte, Casa, Lazer, Saúde, Compras, Salário e Outros.
+
+Próximas versões podem usar essas categorias para filtros, gráficos, exportação e backup.

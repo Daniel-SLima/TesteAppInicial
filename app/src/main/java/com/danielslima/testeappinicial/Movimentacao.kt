@@ -19,5 +19,6 @@ data class Movimentacao(
     val valorCentavos: Long,
     val data: LocalDateTime = LocalDateTime.now(),
     val recorrenciaId: Long? = null,
-    val status: StatusMovimentacao = StatusMovimentacao.REALIZADO
+    val status: StatusMovimentacao = StatusMovimentacao.REALIZADO,
+    val categoria: String = "Outros"
 )

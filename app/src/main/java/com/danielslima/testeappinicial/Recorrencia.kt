@@ -9,5 +9,6 @@ data class Recorrencia(
     val valorCentavos: Long,
     val diaMes: Int,
     val inicioMes: YearMonth,
-    val ativa: Boolean
+    val ativa: Boolean,
+    val categoria: String = "Outros"
 )

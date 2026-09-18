@@ -38,6 +38,7 @@ class MainActivity : Activity() {
     private lateinit var incomeButton: Button
     private lateinit var descriptionInput: EditText
     private lateinit var valueInput: EditText
+    private lateinit var categorySpinner: Spinner
     private lateinit var recurringCheckBox: CheckBox
     private lateinit var recurringOptions: LinearLayout
     private lateinit var recurringDayInput: EditText
@@ -71,6 +72,7 @@ class MainActivity : Activity() {
         incomeButton = findViewById(R.id.incomeButton)
         descriptionInput = findViewById(R.id.descriptionInput)
         valueInput = findViewById(R.id.valueInput)
+        categorySpinner = findViewById(R.id.categorySpinner)
         recurringCheckBox = findViewById(R.id.recurringCheckBox)
         recurringOptions = findViewById(R.id.recurringOptions)
         recurringDayInput = findViewById(R.id.recurringDayInput)
@@ -87,6 +89,13 @@ class MainActivity : Activity() {
         emptyStateText = findViewById(R.id.emptyStateText)
         movementsContainer = findViewById(R.id.movementsContainer)
         historySection = findViewById(R.id.historySection)
+
+        categorySpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            CATEGORIAS
+        )
+        categorySpinner.setSelection(CATEGORIAS.indexOf("Outros"))
 
         recurringDayInput.setText(LocalDate.now().dayOfMonth.toString())
 
@@ -198,6 +207,7 @@ class MainActivity : Activity() {
     private fun registrarMovimentacao() {
         val descricao = descriptionInput.text.toString().trim()
         val valorCentavos = parseValorCentavos(valueInput.text.toString())
+        val categoria = categorySpinner.selectedItem?.toString() ?: "Outros"
 
         if (descricao.isBlank()) {
             descriptionInput.error = "Digite o nome da movimentação"
@@ -212,21 +222,23 @@ class MainActivity : Activity() {
         }
 
         if (recurringCheckBox.isChecked) {
-            registrarRecorrencia(descricao, valorCentavos)
+            registrarRecorrencia(descricao, valorCentavos, categoria)
         } else {
-            registrarMovimentacaoUnica(descricao, valorCentavos)
+            registrarMovimentacaoUnica(descricao, valorCentavos, categoria)
         }
     }
 
     private fun registrarMovimentacaoUnica(
         descricao: String,
-        valorCentavos: Long
+        valorCentavos: Long,
+        categoria: String
     ) {
         val novaMovimentacao = try {
             database.inserir(
                 tipo = tipoSelecionado,
                 descricao = descricao,
-                valorCentavos = valorCentavos
+                valorCentavos = valorCentavos,
+                categoria = categoria
             )
         } catch (erro: SQLiteException) {
             Toast.makeText(
@@ -247,7 +259,8 @@ class MainActivity : Activity() {
 
     private fun registrarRecorrencia(
         descricao: String,
-        valorCentavos: Long
+        valorCentavos: Long,
+        categoria: String
     ) {
         val diaMes = recurringDayInput.text.toString().toIntOrNull()
 
@@ -263,6 +276,7 @@ class MainActivity : Activity() {
                 descricao = descricao,
                 valorCentavos = valorCentavos,
                 diaMes = diaMes,
+                categoria = categoria,
                 inicioMes = YearMonth.now()
             )
             database.garantirRecorrenciasParaMes(YearMonth.now())
@@ -286,6 +300,7 @@ class MainActivity : Activity() {
     private fun limparFormulario() {
         descriptionInput.text.clear()
         valueInput.text.clear()
+        categorySpinner.setSelection(CATEGORIAS.indexOf("Outros"))
         recurringCheckBox.isChecked = false
         recurringDayInput.setText(LocalDate.now().dayOfMonth.toString())
         descriptionInput.requestFocus()
@@ -316,7 +331,7 @@ class MainActivity : Activity() {
 
         val itens = recorrencias.map { recorrencia ->
             val tipo = if (recorrencia.tipo == TipoMovimentacao.GASTO) "Gasto" else "Ganho"
-            "${recorrencia.descricao} • $tipo • ${formatarMoeda(recorrencia.valorCentavos)} • dia ${recorrencia.diaMes}"
+            "${recorrencia.descricao} • ${recorrencia.categoria} • $tipo • ${formatarMoeda(recorrencia.valorCentavos)} • dia ${recorrencia.diaMes}"
         }.toTypedArray()
 
         AlertDialog.Builder(this)
@@ -370,6 +385,7 @@ class MainActivity : Activity() {
         val view = layoutInflater.inflate(R.layout.dialog_editar_movimentacao, null)
         val typeSpinner = view.findViewById<Spinner>(R.id.editTypeSpinner)
         val statusSpinner = view.findViewById<Spinner>(R.id.editStatusSpinner)
+        val categoryEditSpinner = view.findViewById<Spinner>(R.id.editCategorySpinner)
         val descriptionEdit = view.findViewById<EditText>(R.id.editDescriptionInput)
         val valueEdit = view.findViewById<EditText>(R.id.editValueInput)
 
@@ -384,6 +400,14 @@ class MainActivity : Activity() {
         )
 
         configurarStatusSpinner(statusSpinner, movimentacao.tipo, movimentacao.status)
+
+        categoryEditSpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            CATEGORIAS
+        )
+        val categoriaAtualIndex = CATEGORIAS.indexOf(movimentacao.categoria)
+        categoryEditSpinner.setSelection(if (categoriaAtualIndex >= 0) categoriaAtualIndex else CATEGORIAS.indexOf("Outros"))
 
         typeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(
@@ -439,6 +463,7 @@ class MainActivity : Activity() {
                 } else {
                     StatusMovimentacao.PENDENTE
                 }
+                val novaCategoria = categoryEditSpinner.selectedItem?.toString() ?: "Outros"
 
                 if (novaDescricao.isBlank()) {
                     descriptionEdit.error = "Digite o nome da movimentação"
@@ -458,7 +483,8 @@ class MainActivity : Activity() {
                         tipo = novoTipo,
                         descricao = novaDescricao,
                         valorCentavos = novoValor,
-                        status = novoStatus
+                        status = novoStatus,
+                        categoria = novaCategoria
                     )
                 } catch (erro: SQLiteException) {
                     false
@@ -678,7 +704,7 @@ class MainActivity : Activity() {
             }
 
             row.findViewById<TextView>(R.id.movementMeta).text =
-                "${tipoTexto}${fixoTexto} • $statusTexto • ${movimentacao.data.format(dateFormatter)}"
+                "${movimentacao.categoria} • ${tipoTexto}${fixoTexto} • $statusTexto • ${movimentacao.data.format(dateFormatter)}"
 
             val amountText = row.findViewById<TextView>(R.id.movementAmount)
             val sinal = if (movimentacao.tipo == TipoMovimentacao.GASTO) "-" else "+"
@@ -758,5 +784,15 @@ class MainActivity : Activity() {
     companion object {
         private const val PREFERENCIAS = "fintest_preferences"
         private const val CHAVE_CARREGAR_SALDO = "carregar_saldo_entre_meses"
+        private val CATEGORIAS = listOf(
+            "Alimentação",
+            "Transporte",
+            "Casa",
+            "Lazer",
+            "Saúde",
+            "Compras",
+            "Salário",
+            "Outros"
+        )
     }
 }
