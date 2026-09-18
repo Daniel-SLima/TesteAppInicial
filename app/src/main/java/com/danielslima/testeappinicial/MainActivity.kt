@@ -1044,13 +1044,13 @@ class MainActivity : Activity() {
     }
 
     private fun csvCampo(valor: String): String {
-        val escapado = valor.replace(""", """")
+        val escapado = valor.replace("\"", "\"\"")
         return if (
             escapado.contains(';') ||
             escapado.contains('"') ||
             escapado.contains('\n')
         ) {
-            ""$escapado""
+            "\"$escapado\""
         } else {
             escapado
         }
