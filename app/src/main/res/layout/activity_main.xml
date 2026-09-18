@@ -907,8 +907,7 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:orientation="vertical"
-            android:selected="true">
+            android:orientation="vertical">
 
             <ImageView android:layout_width="24dp" android:layout_height="24dp" android:duplicateParentState="true" android:src="@drawable/ic_vira_home" android:tint="@color/vira_nav_tint" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:duplicateParentState="true" android:text="@string/nav_home" android:textColor="@color/vira_nav_tint" android:textSize="10sp" android:textStyle="bold" />
