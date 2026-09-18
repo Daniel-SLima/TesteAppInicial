@@ -31,6 +31,12 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
             criarTabelaRecorrencias(db)
             criarIndices(db)
         }
+
+        if (oldVersion < 3) {
+            db.execSQL(
+                "ALTER TABLE $TABELA_MOVIMENTACOES ADD COLUMN $COLUNA_STATUS TEXT NOT NULL DEFAULT 'REALIZADO'"
+            )
+        }
     }
 
     private fun criarTabelaMovimentacoes(db: SQLiteDatabase) {
@@ -43,7 +49,8 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                 $COLUNA_VALOR_CENTAVOS INTEGER NOT NULL CHECK ($COLUNA_VALOR_CENTAVOS > 0),
                 $COLUNA_DATA TEXT NOT NULL,
                 $COLUNA_RECORRENCIA_ID INTEGER,
-                $COLUNA_COMPETENCIA TEXT
+                $COLUNA_COMPETENCIA TEXT,
+                $COLUNA_STATUS TEXT NOT NULL DEFAULT 'REALIZADO'
             )
             """.trimIndent()
         )
@@ -85,6 +92,7 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
             put(COLUNA_DESCRICAO, descricao)
             put(COLUNA_VALOR_CENTAVOS, valorCentavos)
             put(COLUNA_DATA, data.toString())
+            put(COLUNA_STATUS, StatusMovimentacao.REALIZADO.name)
         }
 
         val id = writableDatabase.insertOrThrow(
@@ -98,7 +106,8 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
             tipo = tipo,
             descricao = descricao,
             valorCentavos = valorCentavos,
-            data = data
+            data = data,
+            status = StatusMovimentacao.REALIZADO
         )
     }
 
@@ -106,12 +115,14 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         id: Long,
         tipo: TipoMovimentacao,
         descricao: String,
-        valorCentavos: Long
+        valorCentavos: Long,
+        status: StatusMovimentacao
     ): Boolean {
         val values = ContentValues().apply {
             put(COLUNA_TIPO, tipo.name)
             put(COLUNA_DESCRICAO, descricao)
             put(COLUNA_VALOR_CENTAVOS, valorCentavos)
+            put(COLUNA_STATUS, status.name)
         }
 
         return writableDatabase.update(
@@ -242,6 +253,7 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                     put(COLUNA_DATA, data.toString())
                     put(COLUNA_RECORRENCIA_ID, recorrencia.id)
                     put(COLUNA_COMPETENCIA, mes.toString())
+                    put(COLUNA_STATUS, StatusMovimentacao.PENDENTE.name)
                 }
 
                 db.insertWithOnConflict(
@@ -282,7 +294,8 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                 COLUNA_DESCRICAO,
                 COLUNA_VALOR_CENTAVOS,
                 COLUNA_DATA,
-                COLUNA_RECORRENCIA_ID
+                COLUNA_RECORRENCIA_ID,
+                COLUNA_STATUS
             ),
             selection,
             selectionArgs,
@@ -296,6 +309,7 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
             val valorIndex = cursor.getColumnIndexOrThrow(COLUNA_VALOR_CENTAVOS)
             val dataIndex = cursor.getColumnIndexOrThrow(COLUNA_DATA)
             val recorrenciaIndex = cursor.getColumnIndexOrThrow(COLUNA_RECORRENCIA_ID)
+            val statusIndex = cursor.getColumnIndexOrThrow(COLUNA_STATUS)
 
             while (cursor.moveToNext()) {
                 val recorrenciaId = if (cursor.isNull(recorrenciaIndex)) {
@@ -311,7 +325,8 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                         descricao = cursor.getString(descricaoIndex),
                         valorCentavos = cursor.getLong(valorIndex),
                         data = LocalDateTime.parse(cursor.getString(dataIndex)),
-                        recorrenciaId = recorrenciaId
+                        recorrenciaId = recorrenciaId,
+                        status = StatusMovimentacao.valueOf(cursor.getString(statusIndex))
                     )
                 )
             }
@@ -322,7 +337,7 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
 
     companion object {
         private const val DATABASE_NAME = "entrou_saiu.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3
 
         private const val TABELA_MOVIMENTACOES = "movimentacoes"
         private const val TABELA_RECORRENCIAS = "recorrencias"
@@ -334,6 +349,7 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         private const val COLUNA_DATA = "data"
         private const val COLUNA_RECORRENCIA_ID = "recorrencia_id"
         private const val COLUNA_COMPETENCIA = "competencia"
+        private const val COLUNA_STATUS = "status"
         private const val COLUNA_DIA_MES = "dia_mes"
         private const val COLUNA_INICIO_MES = "inicio_mes"
         private const val COLUNA_ATIVA = "ativa"

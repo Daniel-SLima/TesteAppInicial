@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteException
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
@@ -40,8 +41,11 @@ class MainActivity : Activity() {
     private lateinit var recurringDayInput: EditText
     private lateinit var monthText: TextView
     private lateinit var balanceText: TextView
+    private lateinit var forecastBalanceText: TextView
     private lateinit var incomeTotalText: TextView
     private lateinit var expenseTotalText: TextView
+    private lateinit var pendingIncomeText: TextView
+    private lateinit var pendingExpenseText: TextView
     private lateinit var emptyStateText: TextView
     private lateinit var movementsContainer: LinearLayout
     private lateinit var historySection: LinearLayout
@@ -65,8 +69,11 @@ class MainActivity : Activity() {
         recurringDayInput = findViewById(R.id.recurringDayInput)
         monthText = findViewById(R.id.monthText)
         balanceText = findViewById(R.id.balanceText)
+        forecastBalanceText = findViewById(R.id.forecastBalanceText)
         incomeTotalText = findViewById(R.id.incomeTotalText)
         expenseTotalText = findViewById(R.id.expenseTotalText)
+        pendingIncomeText = findViewById(R.id.pendingIncomeText)
+        pendingExpenseText = findViewById(R.id.pendingExpenseText)
         emptyStateText = findViewById(R.id.emptyStateText)
         movementsContainer = findViewById(R.id.movementsContainer)
         historySection = findViewById(R.id.historySection)
@@ -236,7 +243,7 @@ class MainActivity : Activity() {
         limparFormulario()
         recarregarInterface()
 
-        Toast.makeText(this, "Fixo mensal criado", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Fixo mensal criado como pendente", Toast.LENGTH_SHORT).show()
         rolarParaHistorico()
     }
 
@@ -326,6 +333,7 @@ class MainActivity : Activity() {
     private fun abrirEditor(movimentacao: Movimentacao) {
         val view = layoutInflater.inflate(R.layout.dialog_editar_movimentacao, null)
         val typeSpinner = view.findViewById<Spinner>(R.id.editTypeSpinner)
+        val statusSpinner = view.findViewById<Spinner>(R.id.editStatusSpinner)
         val descriptionEdit = view.findViewById<EditText>(R.id.editDescriptionInput)
         val valueEdit = view.findViewById<EditText>(R.id.editValueInput)
 
@@ -338,6 +346,32 @@ class MainActivity : Activity() {
         typeSpinner.setSelection(
             if (movimentacao.tipo == TipoMovimentacao.GASTO) 0 else 1
         )
+
+        configurarStatusSpinner(statusSpinner, movimentacao.tipo, movimentacao.status)
+
+        typeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                val statusAtual = if (statusSpinner.selectedItemPosition == 1) {
+                    StatusMovimentacao.PENDENTE
+                } else {
+                    StatusMovimentacao.REALIZADO
+                }
+                val tipoAtual = if (position == 0) {
+                    TipoMovimentacao.GASTO
+                } else {
+                    TipoMovimentacao.GANHO
+                }
+                configurarStatusSpinner(statusSpinner, tipoAtual, statusAtual)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+
         descriptionEdit.setText(movimentacao.descricao)
         valueEdit.setText(formatarValorParaEdicao(movimentacao.valorCentavos))
 
@@ -364,6 +398,11 @@ class MainActivity : Activity() {
                 } else {
                     TipoMovimentacao.GANHO
                 }
+                val novoStatus = if (statusSpinner.selectedItemPosition == 0) {
+                    StatusMovimentacao.REALIZADO
+                } else {
+                    StatusMovimentacao.PENDENTE
+                }
 
                 if (novaDescricao.isBlank()) {
                     descriptionEdit.error = "Digite o nome da movimentação"
@@ -382,7 +421,8 @@ class MainActivity : Activity() {
                         id = movimentacao.id,
                         tipo = novoTipo,
                         descricao = novaDescricao,
-                        valorCentavos = novoValor
+                        valorCentavos = novoValor,
+                        status = novoStatus
                     )
                 } catch (erro: SQLiteException) {
                     false
@@ -412,6 +452,25 @@ class MainActivity : Activity() {
         }
 
         dialog.show()
+    }
+
+    private fun configurarStatusSpinner(
+        spinner: Spinner,
+        tipo: TipoMovimentacao,
+        status: StatusMovimentacao
+    ) {
+        val opcoes = if (tipo == TipoMovimentacao.GASTO) {
+            listOf("Pago", "Pendente")
+        } else {
+            listOf("Recebido", "A receber")
+        }
+
+        spinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            opcoes
+        )
+        spinner.setSelection(if (status == StatusMovimentacao.REALIZADO) 0 else 1)
     }
 
     private fun confirmarExclusao(
@@ -482,25 +541,50 @@ class MainActivity : Activity() {
     }
 
     private fun atualizarResumo() {
-        val totalGanhos = movimentacoes
+        val realizados = movimentacoes.filter { it.status == StatusMovimentacao.REALIZADO }
+        val pendentes = movimentacoes.filter { it.status == StatusMovimentacao.PENDENTE }
+
+        val ganhosRealizados = realizados
             .filter { it.tipo == TipoMovimentacao.GANHO }
             .sumOf { it.valorCentavos }
 
-        val totalGastos = movimentacoes
+        val gastosRealizados = realizados
             .filter { it.tipo == TipoMovimentacao.GASTO }
             .sumOf { it.valorCentavos }
 
-        val saldo = totalGanhos - totalGastos
+        val ganhosPendentes = pendentes
+            .filter { it.tipo == TipoMovimentacao.GANHO }
+            .sumOf { it.valorCentavos }
 
-        balanceText.text = formatarMoeda(saldo)
-        incomeTotalText.text = formatarMoeda(totalGanhos)
-        expenseTotalText.text = formatarMoeda(totalGastos)
+        val gastosPendentes = pendentes
+            .filter { it.tipo == TipoMovimentacao.GASTO }
+            .sumOf { it.valorCentavos }
+
+        val saldoRealizado = ganhosRealizados - gastosRealizados
+        val saldoPrevisto = saldoRealizado + ganhosPendentes - gastosPendentes
+
+        balanceText.text = formatarMoeda(saldoRealizado)
+        forecastBalanceText.text = formatarMoeda(saldoPrevisto)
+        incomeTotalText.text = formatarMoeda(ganhosRealizados)
+        expenseTotalText.text = formatarMoeda(gastosRealizados)
+        pendingIncomeText.text = formatarMoeda(ganhosPendentes)
+        pendingExpenseText.text = formatarMoeda(gastosPendentes)
 
         balanceText.setTextColor(
             getColor(
                 when {
-                    saldo > 0 -> R.color.income
-                    saldo < 0 -> R.color.expense
+                    saldoRealizado > 0 -> R.color.income
+                    saldoRealizado < 0 -> R.color.expense
+                    else -> R.color.text_primary
+                }
+            )
+        )
+
+        forecastBalanceText.setTextColor(
+            getColor(
+                when {
+                    saldoPrevisto > 0 -> R.color.income
+                    saldoPrevisto < 0 -> R.color.expense
                     else -> R.color.text_primary
                 }
             )
@@ -531,9 +615,16 @@ class MainActivity : Activity() {
                 "Ganho"
             }
             val fixoTexto = if (movimentacao.recorrenciaId != null) " • Fixo" else ""
+            val statusTexto = when {
+                movimentacao.tipo == TipoMovimentacao.GASTO &&
+                    movimentacao.status == StatusMovimentacao.REALIZADO -> "Pago"
+                movimentacao.tipo == TipoMovimentacao.GASTO -> "Pendente"
+                movimentacao.status == StatusMovimentacao.REALIZADO -> "Recebido"
+                else -> "A receber"
+            }
 
             row.findViewById<TextView>(R.id.movementMeta).text =
-                "${tipoTexto}${fixoTexto} • ${movimentacao.data.format(dateFormatter)}"
+                "${tipoTexto}${fixoTexto} • $statusTexto • ${movimentacao.data.format(dateFormatter)}"
 
             val amountText = row.findViewById<TextView>(R.id.movementAmount)
             val sinal = if (movimentacao.tipo == TipoMovimentacao.GASTO) "-" else "+"
@@ -547,6 +638,8 @@ class MainActivity : Activity() {
                     }
                 )
             )
+
+            row.alpha = if (movimentacao.status == StatusMovimentacao.PENDENTE) 0.72f else 1f
 
             row.setOnClickListener {
                 abrirEditor(movimentacao)

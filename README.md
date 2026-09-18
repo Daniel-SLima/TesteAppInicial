@@ -2,44 +2,35 @@
 
 Mini app Android de finanças pessoais, desenvolvido sem Android Studio.
 
-## Proposta
-
-Registrar rapidamente o que entrou e saiu do bolso, mantendo uma visão mensal simples e organizada.
-
 ## MVP
 
 - [x] Build Android via GitHub Actions
 - [x] APK instalável
 - [x] Registrar gasto ou ganho
-- [x] Informar descrição e valor
-- [x] Exibir saldo, entradas e gastos
-- [x] Listar movimentações
-- [x] Persistir dados localmente com SQLite nativo
-- [x] Editar e excluir movimentações
-- [x] Visão por mês com navegação anterior/próximo
-- [x] Gastos e ganhos fixos mensais
-- [ ] Pago / pendente e recebido / a receber
+- [x] Persistir dados localmente
+- [x] Editar e excluir
+- [x] Visão mensal
+- [x] Gastos e ganhos fixos
+- [x] Pago / pendente e recebido / a receber
 - [ ] Fechamento mensal automático
 
-## Fixos mensais
+## Status financeiro
 
-Ao registrar uma movimentação, marque **Repetir todo mês** e escolha o dia. O FinTest cria a ocorrência do mês automaticamente e, nos meses seguintes, gera uma nova ocorrência quando aquele mês passa a fazer parte do histórico atual.
+Movimentações rápidas são registradas como realizadas. Ocorrências criadas por fixos mensais começam como pendentes.
 
-O botão **Gerenciar fixos mensais** lista as recorrências ativas e permite desativá-las sem apagar as ocorrências que já fazem parte do histórico.
+Ao tocar em uma movimentação, o status pode ser alterado entre **Pago/Pendente** para gastos ou **Recebido/A receber** para ganhos.
 
-## Persistência e migração
+O resumo mensal separa:
 
-Os dados ficam no SQLite privado do aplicativo. A versão 0.6.0 atualiza o banco de dados preservando os lançamentos já existentes.
+- saldo realizado;
+- saldo previsto após pendências;
+- valores recebidos e pagos;
+- valores a receber e a pagar.
 
-## Stack
+## Migração
 
-- Kotlin
-- Android SDK
-- SQLite nativo
-- Gradle
-- VS Code + terminal
-- Git/GitHub
+A versão 0.7.0 adiciona o status ao banco SQLite preservando os lançamentos anteriores. Movimentações já existentes são migradas como realizadas.
 
 ## Build
 
-O GitHub Actions gera um APK nomeado automaticamente com a versão atual, por exemplo `FinTest-v0.6.0.apk`.
+O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.7.0.apk`.
