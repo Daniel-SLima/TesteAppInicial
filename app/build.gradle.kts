@@ -15,8 +15,8 @@ android {
         applicationId = "com.danielslima.testeappinicial"
         minSdk = 26
         targetSdk = 36
-        versionCode = 21
-        versionName = "1.0.0-alpha02"
+        versionCode = 22
+        versionName = "1.0.0-alpha03"
     }
 
     signingConfigs {

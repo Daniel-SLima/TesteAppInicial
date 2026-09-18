@@ -74,4 +74,22 @@
     <string name="recurring_manager_title">Fixos mensais</string>
     <string name="recurring_manager_subtitle">Seus lançamentos que se repetem automaticamente mês a mês.</string>
     <string name="recurring_manager_empty">Você ainda não tem nenhum gasto ou ganho fixo.</string>
+    <string name="new_movement">+ Novo</string>
+    <string name="new_movement_title">Novo lançamento</string>
+    <string name="new_movement_subtitle">Registre apenas o necessário. Detalhes extras aparecem quando você precisar.</string>
+    <string name="movement_type">Tipo</string>
+    <string name="movement_nature">Como será?</string>
+    <string name="single_movement">Único</string>
+    <string name="filter_all_types">Todos</string>
+    <string name="filter_expenses">Gastos</string>
+    <string name="filter_incomes">Ganhos</string>
+    <string name="filter_all_status">Status</string>
+    <string name="filter_realized">Realizados</string>
+    <string name="filter_pending">Pendentes</string>
+    <string name="filter_all_categories">Categorias</string>
+    <string name="clear_filters">Limpar</string>
+    <string name="choose_option">Escolher</string>
+    <string name="edit_movement_title">Editar lançamento</string>
+    <string name="delete_movement">Excluir lançamento</string>
+    <string name="movement_saved">Lançamento salvo</string>
 </resources>
