@@ -1852,7 +1852,7 @@ class MainActivity : Activity() {
 
             if (offset < 2) {
                 planningMonthsContainer.addView(
-                    Space(this),
+                    View(this),
                     LinearLayout.LayoutParams(
                         dp(10),
                         dp(1)
