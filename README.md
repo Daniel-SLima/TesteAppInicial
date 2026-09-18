@@ -52,3 +52,16 @@ Próximas versões podem usar essas categorias para filtros, gráficos, exporta�
 - Resumo de gastos previstos por categoria.
 - Regras de lançamentos fixos podem ser editadas.
 - Editar ou desativar um fixo preserva o histórico já realizado e atualiza/remove somente projeções pendentes atuais e futuras.
+
+
+## Assinatura permanente
+
+A partir da versão 0.10.1 o projeto está preparado para APKs release assinados sempre com a mesma chave. Isso permite instalar novas versões por cima da anterior sem apagar o banco local.
+
+A chave privada não fica no repositório. O GitHub Actions usa quatro Secrets: `FINTEST_KEYSTORE_BASE64`, `FINTEST_KEYSTORE_PASSWORD`, `FINTEST_KEY_ALIAS` e `FINTEST_KEY_PASSWORD`.
+
+Fingerprint SHA-256 esperado do certificado público:
+
+`34:62:82:AF:5B:F7:5E:05:03:83:4A:D9:31:85:91:E7:8B:E1:2F:D4:98:80:2D:F4:62:D8:48:40:EB:41:AC:73`
+
+Sem os Secrets, o workflow continua verde, mas gera um APK explicitamente marcado como `DEBUG-NAO-ATUALIZA`, que não deve ser usado como base de atualização.

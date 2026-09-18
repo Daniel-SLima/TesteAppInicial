@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build debug APK
+    name: Build FinTest APK
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -54,17 +54,56 @@ jobs:
           yes | "$SDKMANAGER" --licenses > /dev/null || true
           "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
+      - name: Detect permanent signing key
+        id: signing
+        shell: bash
+        env:
+          FINTEST_KEYSTORE_BASE64: ${{ secrets.FINTEST_KEYSTORE_BASE64 }}
+          FINTEST_KEYSTORE_PASSWORD: ${{ secrets.FINTEST_KEYSTORE_PASSWORD }}
+          FINTEST_KEY_ALIAS: ${{ secrets.FINTEST_KEY_ALIAS }}
+          FINTEST_KEY_PASSWORD: ${{ secrets.FINTEST_KEY_PASSWORD }}
+        run: |
+          if [ -n "$FINTEST_KEYSTORE_BASE64" ] &&              [ -n "$FINTEST_KEYSTORE_PASSWORD" ] &&              [ -n "$FINTEST_KEY_ALIAS" ] &&              [ -n "$FINTEST_KEY_PASSWORD" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Assinatura permanente do FinTest configurada."
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Secrets de assinatura ainda nao configurados."
+            echo "O workflow vai gerar apenas um APK debug temporario."
+          fi
+
+      - name: Decode permanent keystore
+        if: steps.signing.outputs.enabled == 'true'
+        shell: bash
+        env:
+          FINTEST_KEYSTORE_BASE64: ${{ secrets.FINTEST_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$FINTEST_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/FinTest-release.jks"
+          chmod 600 "$RUNNER_TEMP/FinTest-release.jks"
+
       - name: Show build environment
         run: |
           java -version
           gradle --version
 
-      - name: Build debug APK
+      - name: Build signed release APK
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          FINTEST_KEYSTORE_PATH: ${{ runner.temp }}/FinTest-release.jks
+          FINTEST_KEYSTORE_PASSWORD: ${{ secrets.FINTEST_KEYSTORE_PASSWORD }}
+          FINTEST_KEY_ALIAS: ${{ secrets.FINTEST_KEY_ALIAS }}
+          FINTEST_KEY_PASSWORD: ${{ secrets.FINTEST_KEY_PASSWORD }}
+        run: gradle --no-daemon clean assembleRelease
+
+      - name: Build temporary debug APK
+        if: steps.signing.outputs.enabled != 'true'
         run: gradle --no-daemon clean assembleDebug
 
       - name: Name APK with app version
         id: apk
         shell: bash
+        env:
+          SIGNED: ${{ steps.signing.outputs.enabled }}
         run: |
           VERSION_NAME="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
 
@@ -73,10 +112,16 @@ jobs:
             exit 1
           fi
 
-          APK_NAME="FinTest-v${VERSION_NAME}.apk"
-          APK_PATH="app/build/outputs/apk/debug/${APK_NAME}"
+          if [ "$SIGNED" = "true" ]; then
+            SOURCE_APK="app/build/outputs/apk/release/app-release.apk"
+            APK_NAME="FinTest-v${VERSION_NAME}.apk"
+          else
+            SOURCE_APK="app/build/outputs/apk/debug/app-debug.apk"
+            APK_NAME="FinTest-v${VERSION_NAME}-DEBUG-NAO-ATUALIZA.apk"
+          fi
 
-          cp app/build/outputs/apk/debug/app-debug.apk "$APK_PATH"
+          APK_PATH="app/build/outputs/apk/${APK_NAME}"
+          cp "$SOURCE_APK" "$APK_PATH"
 
           echo "version=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "name=$APK_NAME" >> "$GITHUB_OUTPUT"
@@ -84,10 +129,29 @@ jobs:
 
           echo "APK final: $APK_NAME"
 
+      - name: Verify permanent signing certificate
+        if: steps.signing.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          APKSIGNER="$(find "$SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+
+          "$APKSIGNER" verify --verbose --print-certs "${{ steps.apk.outputs.path }}" | tee "$RUNNER_TEMP/signature.txt"
+
+          EXPECTED="346282af5bf75e0503834ad9318591e78be12fd498802df462d84840eb41ac73"
+          ACTUAL="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/signature.txt" | tr '[:upper:]' '[:lower:]' | tr -d ':')"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Assinatura inesperada: $ACTUAL"
+            exit 1
+          fi
+
+          echo "Assinatura permanente do FinTest validada."
+
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: FinTest-v${{ steps.apk.outputs.version }}
+          name: ${{ steps.apk.outputs.name }}
           path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
           retention-days: 7
