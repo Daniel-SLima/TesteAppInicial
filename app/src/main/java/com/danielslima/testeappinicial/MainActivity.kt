@@ -20,7 +20,7 @@ import java.util.Locale
 
 class MainActivity : Activity() {
 
-    private val localeBrasil = Locale("pt", "BR")
+    private val localeBrasil = Locale.forLanguageTag("pt-BR")
     private val moeda = NumberFormat.getCurrencyInstance(localeBrasil)
     private val movimentacoes = mutableListOf<Movimentacao>()
 
@@ -43,7 +43,6 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        window.statusBarColor = getColor(R.color.background)
 
         database = MovimentacaoDatabase(applicationContext)
 
