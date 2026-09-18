@@ -87,9 +87,9 @@ jobs:
           java -version
           gradle --version
 
-      - name: Verify Vira Alpha 01 structure
+      - name: Verify Vira UI structure
         if: github.ref == 'refs/heads/feature/vira-1-ui'
-        run: bash scripts/verify-vira-alpha01.sh
+        run: bash scripts/verify-vira-ui.sh
 
       - name: Build signed release APK
         if: steps.signing.outputs.enabled == 'true'

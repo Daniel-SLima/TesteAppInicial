@@ -57,4 +57,18 @@
     <string name="settings_title">Ajustes</string>
     <string name="settings_subtitle">Seu Vira, do seu jeito.</string>
     <string name="monthly_budget">Orçamento do mês</string>
+    <string name="manage_recurring_short">Fixos mensais</string>
+    <string name="manage_budgets_short">Orçamentos</string>
+    <string name="planning_tools">ORGANIZAR</string>
+    <string name="settings_behavior">COMPORTAMENTO E PRIVACIDADE</string>
+    <string name="settings_data">SEUS DADOS</string>
+    <string name="budget_manager_title">Orçamentos mensais</string>
+    <string name="budget_manager_subtitle">Defina quanto pretende gastar por categoria. Toque em uma linha para editar.</string>
+    <string name="budget_editor_title">Definir limite</string>
+    <string name="budget_editor_subtitle">Este limite se repete mensalmente até você alterar ou remover.</string>
+    <string name="budget_value_label">Limite mensal</string>
+    <string name="close">Fechar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="save">Salvar</string>
+    <string name="remove_limit">Remover limite</string>
 </resources>

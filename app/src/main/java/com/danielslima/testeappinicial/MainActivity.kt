@@ -1466,123 +1466,211 @@ class MainActivity : Activity() {
             return
         }
 
-        val itens = CATEGORIAS.map { categoria ->
-            val limite = orcamentos[categoria]
-            if (limite == null) {
-                "$categoria • Sem limite"
-            } else {
-                "$categoria • ${formatarMoeda(limite)}/mês"
-            }
-        }.toTypedArray()
+        val view = layoutInflater.inflate(
+            R.layout.dialog_vira_budget_manager,
+            null
+        )
+        val categoriesContainer =
+            view.findViewById<LinearLayout>(R.id.budgetCategoriesContainer)
+        val closeButton =
+            view.findViewById<TextView>(R.id.budgetManagerCloseButton)
 
-        AlertDialog.Builder(this)
-            .setTitle("Orçamentos mensais")
-            .setMessage("Escolha uma categoria para definir ou alterar o limite.")
-            .setItems(itens) { _, position ->
-                val categoria = CATEGORIAS[position]
-                abrirEditorOrcamento(
-                    categoria,
-                    orcamentos[categoria]
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+
+        CATEGORIAS.forEachIndexed { index, categoria ->
+            val limite = orcamentos[categoria]
+
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                minimumHeight = dp(62)
+                setPadding(dp(12), dp(8), dp(10), dp(8))
+                setBackgroundResource(R.drawable.vira_dialog_row)
+                isClickable = true
+                isFocusable = true
+            }
+
+            val textos = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+
+            textos.addView(
+                TextView(this).apply {
+                    text = categoria
+                    textSize = 14f
+                    setTextColor(getColor(R.color.text_primary))
+                    setTypeface(
+                        typeface,
+                        android.graphics.Typeface.BOLD
+                    )
+                }
+            )
+
+            textos.addView(
+                TextView(this).apply {
+                    text = if (limite == null) {
+                        "Sem limite definido"
+                    } else {
+                        "${formatarMoeda(limite)} por mês"
+                    }
+                    textSize = 12f
+                    setTextColor(getColor(R.color.text_secondary))
+                }
+            )
+
+            row.addView(
+                textos,
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            )
+
+            row.addView(
+                TextView(this).apply {
+                    text = if (limite == null) "Definir  ›" else "Editar  ›"
+                    textSize = 12f
+                    setTextColor(getColor(R.color.brand_secondary))
+                    setTypeface(
+                        typeface,
+                        android.graphics.Typeface.BOLD
+                    )
+                }
+            )
+
+            row.setOnClickListener {
+                dialog.dismiss()
+                abrirEditorOrcamento(categoria, limite)
+            }
+
+            categoriesContainer.addView(row)
+
+            if (index < CATEGORIAS.lastIndex) {
+                categoriesContainer.addView(
+                    View(this).apply {
+                        setBackgroundColor(getColor(R.color.border))
+                    },
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(1)
+                    ).apply {
+                        marginStart = dp(12)
+                        marginEnd = dp(12)
+                    }
                 )
             }
-            .setNegativeButton("Fechar", null)
-            .show()
+        }
+
+        closeButton.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+        aplicarEstiloDialogVira(dialog)
     }
 
     private fun abrirEditorOrcamento(
         categoria: String,
         limiteAtual: Long?
     ) {
-        val input = EditText(this).apply {
-            hint = "R$ 0,00"
-            inputType =
-                android.text.InputType.TYPE_CLASS_NUMBER or
-                    android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-            setPadding(dp(14), 0, dp(14), 0)
-            setBackgroundResource(R.drawable.bg_input)
+        val view = layoutInflater.inflate(
+            R.layout.dialog_vira_budget_editor,
+            null
+        )
+        val categoryText =
+            view.findViewById<TextView>(R.id.budgetEditorCategoryText)
+        val input =
+            view.findViewById<EditText>(R.id.budgetValueInput)
+        val removeButton =
+            view.findViewById<TextView>(R.id.budgetRemoveButton)
+        val cancelButton =
+            view.findViewById<TextView>(R.id.budgetCancelButton)
+        val saveButton =
+            view.findViewById<TextView>(R.id.budgetSaveButton)
 
-            if (limiteAtual != null) {
-                setText(formatarValorParaEdicao(limiteAtual))
-            }
-        }
-
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(8), dp(24), 0)
-
-            addView(
-                input,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(52)
-                )
-            )
-        }
-
-        val builder = AlertDialog.Builder(this)
-            .setTitle("Orçamento: $categoria")
-            .setMessage("Defina o limite mensal desta categoria.")
-            .setView(container)
-            .setPositiveButton("Salvar", null)
-            .setNegativeButton("Cancelar", null)
+        categoryText.text = categoria
 
         if (limiteAtual != null) {
-            builder.setNeutralButton("Remover", null)
+            input.setText(formatarValorParaEdicao(limiteAtual))
+            removeButton.visibility = View.VISIBLE
+        } else {
+            removeButton.visibility = View.GONE
         }
 
-        val dialog = builder.create()
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
 
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val limite = parseValorCentavos(input.text.toString())
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
 
-                if (limite == null || limite <= 0) {
-                    input.error = "Digite um valor maior que zero"
-                    input.requestFocus()
-                    return@setOnClickListener
-                }
+        saveButton.setOnClickListener {
+            val limite = parseValorCentavos(input.text.toString())
 
-                try {
-                    database.salvarOrcamento(categoria, limite)
-                    atualizarResumoCategorias()
-                    dialog.dismiss()
-                    Toast.makeText(
-                        this,
-                        "Orçamento de $categoria atualizado",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } catch (erro: Exception) {
-                    Toast.makeText(
-                        this,
-                        "Não foi possível salvar o orçamento.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
+            if (limite == null || limite <= 0) {
+                input.error = "Digite um valor maior que zero"
+                input.requestFocus()
+                return@setOnClickListener
             }
 
-            if (limiteAtual != null) {
-                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                    try {
-                        database.removerOrcamento(categoria)
-                        atualizarResumoCategorias()
-                        dialog.dismiss()
-                        Toast.makeText(
-                            this,
-                            "Orçamento de $categoria removido",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } catch (erro: SQLiteException) {
-                        Toast.makeText(
-                            this,
-                            "Não foi possível remover o orçamento.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
+            try {
+                database.salvarOrcamento(categoria, limite)
+                recarregarInterface()
+                dialog.dismiss()
+                Toast.makeText(
+                    this,
+                    "Orçamento de $categoria atualizado",
+                    Toast.LENGTH_SHORT
+                ).show()
+                abrirGerenciadorOrcamentos()
+            } catch (erro: Exception) {
+                Toast.makeText(
+                    this,
+                    "Não foi possível salvar o orçamento.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
+        removeButton.setOnClickListener {
+            try {
+                database.removerOrcamento(categoria)
+                recarregarInterface()
+                dialog.dismiss()
+                Toast.makeText(
+                    this,
+                    "Limite de $categoria removido",
+                    Toast.LENGTH_SHORT
+                ).show()
+                abrirGerenciadorOrcamentos()
+            } catch (erro: SQLiteException) {
+                Toast.makeText(
+                    this,
+                    "Não foi possível remover o orçamento.",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
 
         dialog.show()
+        aplicarEstiloDialogVira(dialog)
+        input.requestFocus()
+    }
+
+    private fun aplicarEstiloDialogVira(dialog: AlertDialog) {
+        dialog.window?.setBackgroundDrawable(
+            android.graphics.drawable.ColorDrawable(
+                android.graphics.Color.TRANSPARENT
+            )
+        )
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.92f).toInt(),
+            android.view.WindowManager.LayoutParams.WRAP_CONTENT
+        )
     }
 
     @Suppress("DEPRECATION")
