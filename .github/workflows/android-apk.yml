@@ -138,7 +138,7 @@ jobs:
 
           "$APKSIGNER" verify --verbose --print-certs "${{ steps.apk.outputs.path }}" | tee "$RUNNER_TEMP/signature.txt"
 
-          EXPECTED="346282af5bf75e0503834ad9318591e78be12fd498802df462d84840eb41ac73"
+          EXPECTED="846d6833750f2f511f7936c7a381de1f5ab28c53400213ac8d6144ae8fdf1757"
           ACTUAL="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/signature.txt" | tr '[:upper:]' '[:lower:]' | tr -d ':')"
 
           if [ "$ACTUAL" != "$EXPECTED" ]; then

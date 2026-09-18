@@ -62,6 +62,6 @@ A chave privada não fica no repositório. O GitHub Actions usa quatro Secrets: 
 
 Fingerprint SHA-256 esperado do certificado público:
 
-`34:62:82:AF:5B:F7:5E:05:03:83:4A:D9:31:85:91:E7:8B:E1:2F:D4:98:80:2D:F4:62:D8:48:40:EB:41:AC:73`
+`84:6D:68:33:75:0F:2F:51:1F:79:36:C7:A3:81:DE:1F:5A:B2:8C:53:40:02:13:AC:8D:61:44:AE:8F:DF:17:57`
 
 Sem os Secrets, o workflow continua verde, mas gera um APK explicitamente marcado como `DEBUG-NAO-ATUALIZA`, que não deve ser usado como base de atualização.
