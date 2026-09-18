@@ -17,17 +17,19 @@ Registrar rapidamente o que entrou e saiu do bolso, mantendo uma visão mensal s
 - [x] Persistir dados localmente com SQLite nativo
 - [x] Editar e excluir movimentações
 - [x] Visão por mês com navegação anterior/próximo
-- [ ] Gastos e ganhos recorrentes
+- [x] Gastos e ganhos fixos mensais
 - [ ] Pago / pendente e recebido / a receber
 - [ ] Fechamento mensal automático
 
-## Visão mensal
+## Fixos mensais
 
-O cabeçalho permite navegar entre os meses. O saldo, as entradas, os gastos e a lista de movimentações são recalculados para o mês selecionado.
+Ao registrar uma movimentação, marque **Repetir todo mês** e escolha o dia. O FinTest cria a ocorrência do mês automaticamente e, nos meses seguintes, gera uma nova ocorrência quando aquele mês passa a fazer parte do histórico atual.
 
-## Persistência
+O botão **Gerenciar fixos mensais** lista as recorrências ativas e permite desativá-las sem apagar as ocorrências que já fazem parte do histórico.
 
-As movimentações ficam armazenadas no banco SQLite privado do aplicativo. Fechar o app ou reiniciar o aparelho não apaga os registros. A desinstalação do aplicativo remove os dados locais.
+## Persistência e migração
+
+Os dados ficam no SQLite privado do aplicativo. A versão 0.6.0 atualiza o banco de dados preservando os lançamentos já existentes.
 
 ## Stack
 
@@ -38,10 +40,6 @@ As movimentações ficam armazenadas no banco SQLite privado do aplicativo. Fech
 - VS Code + terminal
 - Git/GitHub
 
-## Fluxo
-
-A branch `main` representa a base estável. A branch `develop` recebe versões já validadas e funcionalidades maiores são desenvolvidas em branches próprias.
-
 ## Build
 
-O GitHub Actions gera um APK nomeado automaticamente com a versão atual, por exemplo `FinTest-v0.5.0.apk`.
+O GitHub Actions gera um APK nomeado automaticamente com a versão atual, por exemplo `FinTest-v0.6.0.apk`.

@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -17,6 +18,7 @@ import android.widget.TextView
 import android.widget.Toast
 import java.math.BigDecimal
 import java.text.NumberFormat
+import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -33,6 +35,9 @@ class MainActivity : Activity() {
     private lateinit var incomeButton: Button
     private lateinit var descriptionInput: EditText
     private lateinit var valueInput: EditText
+    private lateinit var recurringCheckBox: CheckBox
+    private lateinit var recurringOptions: LinearLayout
+    private lateinit var recurringDayInput: EditText
     private lateinit var monthText: TextView
     private lateinit var balanceText: TextView
     private lateinit var incomeTotalText: TextView
@@ -55,6 +60,9 @@ class MainActivity : Activity() {
         incomeButton = findViewById(R.id.incomeButton)
         descriptionInput = findViewById(R.id.descriptionInput)
         valueInput = findViewById(R.id.valueInput)
+        recurringCheckBox = findViewById(R.id.recurringCheckBox)
+        recurringOptions = findViewById(R.id.recurringOptions)
+        recurringDayInput = findViewById(R.id.recurringDayInput)
         monthText = findViewById(R.id.monthText)
         balanceText = findViewById(R.id.balanceText)
         incomeTotalText = findViewById(R.id.incomeTotalText)
@@ -62,6 +70,16 @@ class MainActivity : Activity() {
         emptyStateText = findViewById(R.id.emptyStateText)
         movementsContainer = findViewById(R.id.movementsContainer)
         historySection = findViewById(R.id.historySection)
+
+        recurringDayInput.setText(LocalDate.now().dayOfMonth.toString())
+
+        recurringCheckBox.setOnCheckedChangeListener { _, checked ->
+            recurringOptions.visibility = if (checked) View.VISIBLE else View.GONE
+        }
+
+        findViewById<Button>(R.id.manageRecurringButton).setOnClickListener {
+            abrirGerenciadorFixos()
+        }
 
         findViewById<Button>(R.id.previousMonthButton).setOnClickListener {
             mesSelecionado = mesSelecionado.minusMonths(1)
@@ -96,6 +114,10 @@ class MainActivity : Activity() {
 
     private fun carregarMovimentacoes() {
         try {
+            if (!mesSelecionado.isAfter(YearMonth.now())) {
+                database.garantirRecorrenciasParaMes(mesSelecionado)
+            }
+
             movimentacoes.clear()
             movimentacoes.addAll(database.listarPorMes(mesSelecionado))
         } catch (erro: SQLiteException) {
@@ -146,6 +168,17 @@ class MainActivity : Activity() {
             return
         }
 
+        if (recurringCheckBox.isChecked) {
+            registrarRecorrencia(descricao, valorCentavos)
+        } else {
+            registrarMovimentacaoUnica(descricao, valorCentavos)
+        }
+    }
+
+    private fun registrarMovimentacaoUnica(
+        descricao: String,
+        valorCentavos: Long
+    ) {
         val novaMovimentacao = try {
             database.inserir(
                 tipo = tipoSelecionado,
@@ -162,17 +195,131 @@ class MainActivity : Activity() {
         }
 
         mesSelecionado = YearMonth.from(novaMovimentacao.data)
-
-        descriptionInput.text.clear()
-        valueInput.text.clear()
-        descriptionInput.requestFocus()
-
+        limparFormulario()
         recarregarInterface()
 
         Toast.makeText(this, "Movimentação salva no aparelho", Toast.LENGTH_SHORT).show()
+        rolarParaHistorico()
+    }
 
+    private fun registrarRecorrencia(
+        descricao: String,
+        valorCentavos: Long
+    ) {
+        val diaMes = recurringDayInput.text.toString().toIntOrNull()
+
+        if (diaMes == null || diaMes !in 1..31) {
+            recurringDayInput.error = "Use um dia entre 1 e 31"
+            recurringDayInput.requestFocus()
+            return
+        }
+
+        try {
+            database.inserirRecorrencia(
+                tipo = tipoSelecionado,
+                descricao = descricao,
+                valorCentavos = valorCentavos,
+                diaMes = diaMes,
+                inicioMes = YearMonth.now()
+            )
+            database.garantirRecorrenciasParaMes(YearMonth.now())
+        } catch (erro: SQLiteException) {
+            Toast.makeText(
+                this,
+                "Não foi possível criar o lançamento fixo.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        mesSelecionado = YearMonth.now()
+        limparFormulario()
+        recarregarInterface()
+
+        Toast.makeText(this, "Fixo mensal criado", Toast.LENGTH_SHORT).show()
+        rolarParaHistorico()
+    }
+
+    private fun limparFormulario() {
+        descriptionInput.text.clear()
+        valueInput.text.clear()
+        recurringCheckBox.isChecked = false
+        recurringDayInput.setText(LocalDate.now().dayOfMonth.toString())
+        descriptionInput.requestFocus()
+    }
+
+    private fun rolarParaHistorico() {
         historySection.post {
             mainScroll.smoothScrollTo(0, historySection.top)
+        }
+    }
+
+    private fun abrirGerenciadorFixos() {
+        val recorrencias = try {
+            database.listarRecorrenciasAtivas()
+        } catch (erro: SQLiteException) {
+            Toast.makeText(this, "Não foi possível carregar os fixos.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        if (recorrencias.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("Fixos mensais")
+                .setMessage("Você ainda não cadastrou nenhum gasto ou ganho fixo.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+
+        val itens = recorrencias.map { recorrencia ->
+            val tipo = if (recorrencia.tipo == TipoMovimentacao.GASTO) "Gasto" else "Ganho"
+            "${recorrencia.descricao} • $tipo • ${formatarMoeda(recorrencia.valorCentavos)} • dia ${recorrencia.diaMes}"
+        }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Fixos mensais")
+            .setItems(itens) { _, position ->
+                abrirDetalheRecorrencia(recorrencias[position])
+            }
+            .setNegativeButton("Fechar", null)
+            .show()
+    }
+
+    private fun abrirDetalheRecorrencia(recorrencia: Recorrencia) {
+        val tipo = if (recorrencia.tipo == TipoMovimentacao.GASTO) "Gasto" else "Ganho"
+
+        AlertDialog.Builder(this)
+            .setTitle(recorrencia.descricao)
+            .setMessage(
+                "$tipo mensal\n${formatarMoeda(recorrencia.valorCentavos)}\nDia ${recorrencia.diaMes} de cada mês"
+            )
+            .setPositiveButton("Desativar") { _, _ ->
+                desativarRecorrencia(recorrencia.id)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun desativarRecorrencia(recorrenciaId: Long) {
+        val desativou = try {
+            database.desativarRecorrencia(recorrenciaId)
+        } catch (erro: SQLiteException) {
+            false
+        }
+
+        if (desativou) {
+            recarregarInterface()
+            Toast.makeText(
+                this,
+                "Fixo desativado. O histórico foi mantido.",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            Toast.makeText(
+                this,
+                "Não foi possível desativar o fixo.",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -194,12 +341,18 @@ class MainActivity : Activity() {
         descriptionEdit.setText(movimentacao.descricao)
         valueEdit.setText(formatarValorParaEdicao(movimentacao.valorCentavos))
 
+        val neutralText = if (movimentacao.recorrenciaId == null) {
+            "Excluir"
+        } else {
+            "Desativar fixo"
+        }
+
         val dialog = AlertDialog.Builder(this)
             .setTitle("Editar movimentação")
             .setView(view)
             .setPositiveButton("Salvar", null)
             .setNegativeButton("Cancelar", null)
-            .setNeutralButton("Excluir", null)
+            .setNeutralButton(neutralText, null)
             .create()
 
         dialog.setOnShowListener {
@@ -250,7 +403,11 @@ class MainActivity : Activity() {
             }
 
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                confirmarExclusao(movimentacao, dialog)
+                if (movimentacao.recorrenciaId == null) {
+                    confirmarExclusao(movimentacao, dialog)
+                } else {
+                    confirmarDesativacaoFixo(movimentacao.recorrenciaId, dialog)
+                }
             }
         }
 
@@ -279,6 +436,36 @@ class MainActivity : Activity() {
                     Toast.makeText(
                         this,
                         "Não foi possível excluir a movimentação.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun confirmarDesativacaoFixo(
+        recorrenciaId: Long,
+        editorDialog: AlertDialog
+    ) {
+        AlertDialog.Builder(this)
+            .setTitle("Desativar lançamento fixo?")
+            .setMessage("Os meses já registrados serão mantidos. Novos meses não serão criados.")
+            .setPositiveButton("Desativar") { _, _ ->
+                val desativou = try {
+                    database.desativarRecorrencia(recorrenciaId)
+                } catch (erro: SQLiteException) {
+                    false
+                }
+
+                if (desativou) {
+                    recarregarInterface()
+                    editorDialog.dismiss()
+                    Toast.makeText(this, "Fixo desativado", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Não foi possível desativar o fixo.",
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -343,9 +530,10 @@ class MainActivity : Activity() {
             } else {
                 "Ganho"
             }
+            val fixoTexto = if (movimentacao.recorrenciaId != null) " • Fixo" else ""
 
             row.findViewById<TextView>(R.id.movementMeta).text =
-                "${tipoTexto} • ${movimentacao.data.format(dateFormatter)}"
+                "${tipoTexto}${fixoTexto} • ${movimentacao.data.format(dateFormatter)}"
 
             val amountText = row.findViewById<TextView>(R.id.movementAmount)
             val sinal = if (movimentacao.tipo == TipoMovimentacao.GASTO) "-" else "+"
