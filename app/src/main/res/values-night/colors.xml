@@ -1,12 +1,17 @@
 <resources>
-    <color name="background">#111418</color>
-    <color name="surface">#1A1F25</color>
-    <color name="text_primary">#F2F4F7</color>
-    <color name="text_secondary">#AAB2BD</color>
-    <color name="border">#303741</color>
-    <color name="unselected">#252B33</color>
-    <color name="accent">#6EA8FE</color>
-    <color name="income">#5FD19A</color>
-    <color name="expense">#FF7B72</color>
+    <color name="background">#101715</color>
+    <color name="surface">#18211F</color>
+    <color name="text_primary">#F4F1EA</color>
+    <color name="text_secondary">#AAB6B1</color>
+    <color name="border">#2A3632</color>
+    <color name="unselected">#24302C</color>
+    <color name="accent">#72B7A6</color>
+    <color name="brand_primary">#2B6A5B</color>
+    <color name="brand_secondary">#72B7A6</color>
+    <color name="brand_soft">#213A34</color>
+    <color name="brand_gold">#E2B862</color>
+    <color name="income">#77C8B3</color>
+    <color name="expense">#FF8B7C</color>
+    <color name="expense_soft">#4A2A27</color>
     <color name="white">#FFFFFF</color>
 </resources>
