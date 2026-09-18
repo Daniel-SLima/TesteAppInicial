@@ -106,4 +106,9 @@
     <string name="month_picker_subtitle">Escolha o ano e depois toque no mês.</string>
     <string name="current_month">Mês atual</string>
     <string name="registered">✓ Registrado</string>
+    <string name="choose_month">Escolher mês</string>
+    <string name="current_month_short">Mês atual</string>
+    <string name="reminder_notifications">Lembrar vencimentos e recebimentos</string>
+    <string name="reminder_notifications_hint">Avisos locais 1 dia antes, no dia e se o compromisso continuar pendente.</string>
+    <string name="overdue">Atrasado</string>
 </resources>

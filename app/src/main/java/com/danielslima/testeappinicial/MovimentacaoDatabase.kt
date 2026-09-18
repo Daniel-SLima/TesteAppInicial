@@ -503,6 +503,29 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         )
     }
 
+    fun buscarPorId(id: Long): Movimentacao? {
+        return consultar(
+            selection = "$COLUNA_ID = ?",
+            selectionArgs = arrayOf(id.toString())
+        ).firstOrNull()
+    }
+
+    fun listarPendentesEntre(
+        inicio: LocalDateTime,
+        fimExclusivo: LocalDateTime
+    ): List<Movimentacao> {
+        return consultar(
+            selection =
+                "$COLUNA_STATUS = ? AND " +
+                    "$COLUNA_DATA >= ? AND $COLUNA_DATA < ?",
+            selectionArgs = arrayOf(
+                StatusMovimentacao.PENDENTE.name,
+                inicio.toString(),
+                fimExclusivo.toString()
+            )
+        )
+    }
+
     fun listarPorMes(mes: YearMonth): List<Movimentacao> {
         val inicio = mes.atDay(1).atStartOfDay()
         val fimExclusivo = mes.plusMonths(1).atDay(1).atStartOfDay()

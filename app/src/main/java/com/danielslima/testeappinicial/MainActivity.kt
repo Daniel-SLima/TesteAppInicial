@@ -1,19 +1,23 @@
 package com.danielslima.testeappinicial
 
+import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.KeyguardManager
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.database.sqlite.SQLiteException
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
+import android.view.WindowInsets
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -41,6 +45,7 @@ class MainActivity : Activity() {
 
     private lateinit var database: MovimentacaoDatabase
     private lateinit var preferencias: SharedPreferences
+    private lateinit var screenHost: View
     private lateinit var mainScroll: ScrollView
     private lateinit var expenseButton: Button
     private lateinit var incomeButton: Button
@@ -55,8 +60,11 @@ class MainActivity : Activity() {
     private lateinit var recurringDayInput: EditText
     private lateinit var carryBalanceCheckBox: CheckBox
     private lateinit var securityCheckBox: CheckBox
+    private lateinit var notificationCheckBox: CheckBox
     private lateinit var monthText: TextView
     private lateinit var monthStateText: TextView
+    private lateinit var homeChooseMonthAction: TextView
+    private lateinit var homeCurrentMonthAction: TextView
     private lateinit var initialBalanceText: TextView
     private lateinit var balanceText: TextView
     private lateinit var forecastBalanceText: TextView
@@ -87,7 +95,9 @@ class MainActivity : Activity() {
     private lateinit var homeBudgetProgressText: TextView
     private lateinit var movementsMonthText: TextView
     private lateinit var planningMonthText: TextView
+    private lateinit var movementsChooseMonthAction: TextView
     private lateinit var movementsCurrentMonthAction: TextView
+    private lateinit var planningChooseMonthAction: TextView
     private lateinit var planningCurrentMonthAction: TextView
     private lateinit var planningMonthNetText: TextView
     private lateinit var planningIncomeExpectedText: TextView
@@ -107,6 +117,7 @@ class MainActivity : Activity() {
     private var autenticadoNestaSessao = false
     private var autenticacaoEmAndamento = false
     private var alterandoProtecao = false
+    private var alterandoNotificacoes = false
     private var momentoSegundoPlanoMs: Long? = null
     private var filtroTipo = 0
     private var filtroStatus = 0
@@ -121,11 +132,17 @@ class MainActivity : Activity() {
         database = MovimentacaoDatabase(applicationContext)
         preferencias = getSharedPreferences(PREFERENCIAS, MODE_PRIVATE)
 
+        screenHost = findViewById(R.id.screenHost)
+        aplicarInsetsSistema()
+
         mainScroll = findViewById(R.id.mainScroll)
         carryBalanceCheckBox = findViewById(R.id.carryBalanceCheckBox)
         securityCheckBox = findViewById(R.id.securityCheckBox)
+        notificationCheckBox = findViewById(R.id.notificationCheckBox)
         monthText = findViewById(R.id.monthText)
         monthStateText = findViewById(R.id.monthStateText)
+        homeChooseMonthAction = findViewById(R.id.homeChooseMonthAction)
+        homeCurrentMonthAction = findViewById(R.id.homeCurrentMonthAction)
         initialBalanceText = findViewById(R.id.initialBalanceText)
         balanceText = findViewById(R.id.balanceText)
         forecastBalanceText = findViewById(R.id.forecastBalanceText)
@@ -156,8 +173,12 @@ class MainActivity : Activity() {
         homeBudgetProgressText = findViewById(R.id.homeBudgetProgressText)
         movementsMonthText = findViewById(R.id.movementsMonthText)
         planningMonthText = findViewById(R.id.planningMonthText)
+        movementsChooseMonthAction =
+            findViewById(R.id.movementsChooseMonthAction)
         movementsCurrentMonthAction =
             findViewById(R.id.movementsCurrentMonthAction)
+        planningChooseMonthAction =
+            findViewById(R.id.planningChooseMonthAction)
         planningCurrentMonthAction =
             findViewById(R.id.planningCurrentMonthAction)
         planningMonthNetText = findViewById(R.id.planningMonthNetText)
@@ -226,6 +247,37 @@ class MainActivity : Activity() {
             }
         }
 
+        ViraReminderScheduler.criarCanal(this)
+
+        val notificacoesAtivas =
+            preferencias.getBoolean(CHAVE_NOTIFICACOES, false) &&
+                ViraReminderScheduler.temPermissao(this)
+
+        if (!notificacoesAtivas) {
+            preferencias.edit()
+                .putBoolean(CHAVE_NOTIFICACOES, false)
+                .apply()
+        }
+
+        alterandoNotificacoes = true
+        notificationCheckBox.isChecked = notificacoesAtivas
+        alterandoNotificacoes = false
+
+        notificationCheckBox.setOnCheckedChangeListener { _, checked ->
+            if (alterandoNotificacoes) {
+                return@setOnCheckedChangeListener
+            }
+
+            if (checked) {
+                ativarNotificacoes()
+            } else {
+                preferencias.edit()
+                    .putBoolean(CHAVE_NOTIFICACOES, false)
+                    .apply()
+                ViraReminderScheduler.cancelarTodos(this)
+            }
+        }
+
         findViewById<Button>(R.id.manageRecurringButton).setOnClickListener {
             abrirGerenciadorFixos()
         }
@@ -269,12 +321,21 @@ class MainActivity : Activity() {
         monthText.setOnClickListener {
             abrirSeletorMes()
         }
+        homeChooseMonthAction.setOnClickListener {
+            abrirSeletorMes()
+        }
 
         movementsMonthText.setOnClickListener {
             abrirSeletorMes()
         }
+        movementsChooseMonthAction.setOnClickListener {
+            abrirSeletorMes()
+        }
 
         planningMonthText.setOnClickListener {
+            abrirSeletorMes()
+        }
+        planningChooseMonthAction.setOnClickListener {
             abrirSeletorMes()
         }
 
@@ -282,6 +343,10 @@ class MainActivity : Activity() {
             if (mesSelecionado != YearMonth.now()) {
                 voltarParaMesAtual()
             }
+        }
+
+        homeCurrentMonthAction.setOnClickListener {
+            voltarParaMesAtual()
         }
 
         movementsCurrentMonthAction.setOnClickListener {
@@ -330,7 +395,13 @@ class MainActivity : Activity() {
             selecionarSecao(ViraSection.PLANNING)
         }
 
-        selecionarSecao(ViraSection.initial())
+        selecionarSecao(
+            if (intent.getBooleanExtra("abrir_movimentacoes", false)) {
+                ViraSection.MOVEMENTS
+            } else {
+                ViraSection.initial()
+            }
+        )
         recarregarInterface()
     }
 
@@ -392,6 +463,37 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(
+            requestCode,
+            permissions,
+            grantResults
+        )
+
+        if (requestCode != REQUEST_NOTIFICACOES) return
+
+        val concedida =
+            grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+
+        preferencias.edit()
+            .putBoolean(CHAVE_NOTIFICACOES, concedida)
+            .apply()
+
+        alterandoNotificacoes = true
+        notificationCheckBox.isChecked = concedida
+        alterandoNotificacoes = false
+
+        if (concedida) {
+            ViraReminderScheduler.reagendar(this)
+        } else {
+            ViraReminderScheduler.cancelarTodos(this)
+        }
+    }
+
     @Suppress("DEPRECATION")
     override fun onActivityResult(
         requestCode: Int,
@@ -435,6 +537,58 @@ class MainActivity : Activity() {
                 "Não foi possível carregar as movimentações salvas.",
                 Toast.LENGTH_LONG
             ).show()
+        }
+    }
+
+    private fun aplicarInsetsSistema() {
+        screenHost.setOnApplyWindowInsetsListener { view, insets ->
+            val statusBarTop =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    insets.getInsets(WindowInsets.Type.statusBars()).top
+                } else {
+                    @Suppress("DEPRECATION")
+                    insets.systemWindowInsetTop
+                }
+
+            view.setPadding(
+                view.paddingLeft,
+                statusBarTop + dp(10),
+                view.paddingRight,
+                view.paddingBottom
+            )
+            insets
+        }
+
+        screenHost.requestApplyInsets()
+    }
+
+    private fun ativarNotificacoes() {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                REQUEST_NOTIFICACOES
+            )
+            return
+        }
+
+        preferencias.edit()
+            .putBoolean(CHAVE_NOTIFICACOES, true)
+            .apply()
+
+        ViraReminderScheduler.reagendar(this)
+    }
+
+    private fun atualizarNotificacoesSeAtivas() {
+        if (
+            ::notificationCheckBox.isInitialized &&
+            notificationCheckBox.isChecked &&
+            preferencias.getBoolean(CHAVE_NOTIFICACOES, false)
+        ) {
+            ViraReminderScheduler.reagendar(this)
         }
     }
 
@@ -1551,12 +1705,14 @@ class MainActivity : Activity() {
             }
 
             recarregarInterface()
-            dialog.dismiss()
-            Toast.makeText(
-                this,
-                "Movimentação atualizada",
-                Toast.LENGTH_SHORT
-            ).show()
+            saveButton.text = "✓ Salvo"
+            saveButton.isEnabled = false
+            saveButton.setBackgroundResource(R.drawable.vira_button_income)
+            saveButton.postDelayed({
+                if (dialog.isShowing) {
+                    dialog.dismiss()
+                }
+            }, 280L)
         }
 
         deleteButton.setOnClickListener {
@@ -1611,7 +1767,6 @@ class MainActivity : Activity() {
                 if (excluiu) {
                     recarregarInterface()
                     editorDialog.dismiss()
-                    Toast.makeText(this, "Movimentação excluída", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(
                         this,
@@ -1641,7 +1796,6 @@ class MainActivity : Activity() {
                 if (desativou) {
                     recarregarInterface()
                     editorDialog.dismiss()
-                    Toast.makeText(this, "Fixo desativado", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(
                         this,
@@ -1659,16 +1813,11 @@ class MainActivity : Activity() {
         val mesAtual = YearMonth.now()
         val foraDoMesAtual = mesSelecionado != mesAtual
 
-        monthText.text = mesFormatado + "  ▾"
-        movementsMonthText.text = mesFormatado + "  ▾"
-        planningMonthText.text = mesFormatado + "  ▾"
+        monthText.text = mesFormatado
+        movementsMonthText.text = mesFormatado
+        planningMonthText.text = mesFormatado
 
-        monthStateText.text =
-            if (foraDoMesAtual) {
-                estadoDoMes(mesSelecionado) + " • Voltar ao mês atual"
-            } else {
-                estadoDoMes(mesSelecionado)
-            }
+        monthStateText.text = estadoDoMes(mesSelecionado)
         monthStateText.setTextColor(
             getColor(
                 if (foraDoMesAtual) {
@@ -1679,6 +1828,8 @@ class MainActivity : Activity() {
             )
         )
 
+        homeCurrentMonthAction.visibility =
+            if (foraDoMesAtual) View.VISIBLE else View.GONE
         movementsCurrentMonthAction.visibility =
             if (foraDoMesAtual) View.VISIBLE else View.GONE
         planningCurrentMonthAction.visibility =
@@ -1691,6 +1842,7 @@ class MainActivity : Activity() {
         renderizarProximosVencimentos()
         atualizarResumoOrcamentoHome()
         atualizarPlanejamento()
+        atualizarNotificacoesSeAtivas()
     }
 
     private fun atualizarResumo() {
@@ -2136,10 +2288,19 @@ class MainActivity : Activity() {
                     movimentacao.categoria
             }
 
+            val atrasada =
+                movimentacao.data.toLocalDate().isBefore(LocalDate.now())
+
             textos.addView(
                 TextView(this).apply {
-                    text = contexto + " • " +
-                        movimentacao.data.format(formatter)
+                    text =
+                        if (atrasada) {
+                            "Atrasado • " + contexto + " • " +
+                                movimentacao.data.format(formatter)
+                        } else {
+                            contexto + " • " +
+                                movimentacao.data.format(formatter)
+                        }
                     textSize = 11f
                     setTextColor(getColor(R.color.text_secondary))
                 }
@@ -2283,7 +2444,7 @@ class MainActivity : Activity() {
             .distinct()
             .sortedByDescending { gastosPorCategoria[it] ?: 0L }
 
-        val categoriasExibidas = todasCategoriasExibidas.take(4)
+        val categoriasExibidas = todasCategoriasExibidas
 
         categoryChartContainer.removeAllViews()
 
@@ -2421,24 +2582,6 @@ class MainActivity : Activity() {
             categoryChartContainer.addView(bloco)
         }
 
-        val restantes =
-            todasCategoriasExibidas.size - categoriasExibidas.size
-
-        if (restantes > 0) {
-            categoryChartContainer.addView(
-                TextView(this).apply {
-                    text = "+ " + restantes +
-                        " categorias no gerenciador"
-                    textSize = 12f
-                    setTextColor(getColor(R.color.brand_secondary))
-                    setTypeface(
-                        typeface,
-                        android.graphics.Typeface.BOLD
-                    )
-                    setPadding(0, dp(4), 0, 0)
-                }
-            )
-        }
     }
 
     private fun abrirGerenciadorOrcamentos() {
@@ -3017,7 +3160,12 @@ class MainActivity : Activity() {
             } else {
                 ""
             }
+            val atrasada =
+                movimentacao.status == StatusMovimentacao.PENDENTE &&
+                    movimentacao.data.toLocalDate().isBefore(LocalDate.now())
+
             val statusTexto = when {
+                atrasada -> "Atrasado"
                 movimentacao.tipo == TipoMovimentacao.GASTO &&
                     movimentacao.status == StatusMovimentacao.REALIZADO -> "Pago"
                 movimentacao.tipo == TipoMovimentacao.GASTO -> "Pendente"
@@ -3032,7 +3180,11 @@ class MainActivity : Activity() {
                 text = statusTexto
                 setTextColor(
                     getColor(
-                        if (movimentacao.status == StatusMovimentacao.PENDENTE) {
+                        if (atrasada) {
+                            R.color.expense
+                        } else if (
+                            movimentacao.status == StatusMovimentacao.PENDENTE
+                        ) {
                             R.color.brand_gold
                         } else if (
                             movimentacao.tipo == TipoMovimentacao.GASTO
@@ -3068,7 +3220,11 @@ class MainActivity : Activity() {
                 )
             )
 
-            row.alpha = if (movimentacao.status == StatusMovimentacao.PENDENTE) 0.72f else 1f
+            row.alpha = when {
+                atrasada -> 1f
+                movimentacao.status == StatusMovimentacao.PENDENTE -> 0.78f
+                else -> 1f
+            }
 
             row.setOnClickListener {
                 abrirEditor(movimentacao)
@@ -3134,10 +3290,12 @@ class MainActivity : Activity() {
         private const val PREFERENCIAS = "fintest_preferences"
         private const val CHAVE_CARREGAR_SALDO = "carregar_saldo_entre_meses"
         private const val CHAVE_PROTEGER_APP = "proteger_app_bloqueio_android"
+        private const val CHAVE_NOTIFICACOES = "notificacoes_vencimentos"
         private const val REQUEST_EXPORT_CSV = 1201
         private const val REQUEST_EXPORT_BACKUP = 1202
         private const val REQUEST_IMPORT_BACKUP = 1203
         private const val REQUEST_AUTH_APP = 1204
+        private const val REQUEST_NOTIFICACOES = 1205
         private const val TEMPO_REAUTENTICACAO_MS = 5 * 60 * 1000L
         private val CSV_CHARSET: Charset = Charset.forName("windows-1252")
 

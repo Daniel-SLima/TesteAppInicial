@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 fail(){ echo "ERRO: $1"; exit 1; }
-grep -q 'versionName = "1.0.0-alpha04.1"' app/build.gradle.kts || fail "versionName Alpha 04.1 incorreto"
-grep -q 'versionCode = 24' app/build.gradle.kts || fail "versionCode Alpha 04.1 incorreto"
+grep -q 'versionName = "1.0.0-alpha05"' app/build.gradle.kts || fail "versionName Alpha 05 incorreto"
+grep -q 'versionCode = 25' app/build.gradle.kts || fail "versionCode Alpha 05 incorreto"
 grep -q 'applicationId = "com.danielslima.testeappinicial"' app/build.gradle.kts || fail "applicationId mudou"
 for file in app/src/main/res/layout/dialog_vira_budget_manager.xml app/src/main/res/layout/dialog_vira_budget_editor.xml app/src/main/res/drawable/vira_checkbox.xml app/src/main/res/drawable/vira_dialog_surface.xml; do test -f "$file" || fail "arquivo $file ausente"; done
 grep -q 'android:button="@drawable/vira_checkbox"' app/src/main/res/layout/activity_main.xml || fail "checkbox Vira não aplicado"
@@ -26,5 +26,18 @@ test -f app/src/main/res/layout/dialog_vira_month_picker.xml || fail "seletor de
 grep -q 'abrirSeletorMes' app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt || fail "navegação rápida entre meses ausente"
 grep -q 'Voltar ao mês atual' app/src/main/res/values/strings.xml || fail "atalho para mês atual ausente"
 if grep -q 'Movimentação salva no aparelho' app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt; then fail "toast de sucesso do lançamento ainda presente"; fi
-grep -q 'android:paddingTop="12dp"' app/src/main/res/layout/activity_main.xml || fail "respiro superior ausente"
-echo "Vira Alpha 04.1: navegação mensal e feedback validados"
+if grep -q 'android:paddingTop="12dp"' app/src/main/res/layout/activity_main.xml; then fail "padding fixo antigo ainda presente"; fi
+grep -q 'aplicarInsetsSistema' app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt || fail "insets reais do Android ausentes"
+grep -q 'homeChooseMonthAction' app/src/main/res/layout/activity_main.xml || fail "atalho de mês na Home ausente"
+grep -q 'movementsChooseMonthAction' app/src/main/res/layout/activity_main.xml || fail "atalho de mês em Movimentações ausente"
+grep -q 'planningChooseMonthAction' app/src/main/res/layout/activity_main.xml || fail "atalho de mês no Planejamento ausente"
+grep -q 'notificationCheckBox' app/src/main/res/layout/activity_main.xml || fail "controle de notificações ausente"
+grep -q 'POST_NOTIFICATIONS' app/src/main/AndroidManifest.xml || fail "permissão de notificações ausente"
+grep -q 'ViraReminderReceiver' app/src/main/AndroidManifest.xml || fail "receiver de lembretes ausente"
+grep -q 'ViraBootReceiver' app/src/main/AndroidManifest.xml || fail "receiver de reinício ausente"
+test -f app/src/main/java/com/danielslima/testeappinicial/ViraReminderScheduler.kt || fail "scheduler de lembretes ausente"
+test -f app/src/main/java/com/danielslima/testeappinicial/ViraReminderReceiver.kt || fail "receiver de lembretes ausente"
+test -f app/src/main/java/com/danielslima/testeappinicial/ViraBootReceiver.kt || fail "receiver de boot ausente"
+if grep -q 'Movimentação atualizada' app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt; then fail "toast de atualização ainda presente"; fi
+if grep -q 'take(4)' app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt; then fail "gráfico de categorias ainda truncado"; fi
+echo "Vira Alpha 05: notificações e refinamentos validados"
