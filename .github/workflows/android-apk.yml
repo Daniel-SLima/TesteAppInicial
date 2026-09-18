@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - develop
+      - feature/finance-mvp
   workflow_dispatch:
 
 permissions:
@@ -64,7 +65,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: TesteAppInicial-debug-${{ github.run_number }}
+          name: EntrouSaiu-debug-${{ github.run_number }}
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7

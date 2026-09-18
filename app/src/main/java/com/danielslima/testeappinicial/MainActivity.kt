@@ -1,15 +1,245 @@
 package com.danielslima.testeappinicial
 
 import android.app.Activity
+import android.content.res.ColorStateList
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
+import java.math.BigDecimal
+import java.text.NumberFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class MainActivity : Activity() {
+
+    private val localeBrasil = Locale("pt", "BR")
+    private val moeda = NumberFormat.getCurrencyInstance(localeBrasil)
+    private val movimentacoes = mutableListOf<Movimentacao>()
+
+    private lateinit var mainScroll: ScrollView
+    private lateinit var expenseButton: Button
+    private lateinit var incomeButton: Button
+    private lateinit var descriptionInput: EditText
+    private lateinit var valueInput: EditText
+    private lateinit var balanceText: TextView
+    private lateinit var incomeTotalText: TextView
+    private lateinit var expenseTotalText: TextView
+    private lateinit var emptyStateText: TextView
+    private lateinit var movementsContainer: LinearLayout
+    private lateinit var historySection: LinearLayout
+
+    private var tipoSelecionado = TipoMovimentacao.GASTO
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        findViewById<TextView>(R.id.statusText).text =
-            "Base Android funcionando. Próximo passo: tarefas offline."
+        window.statusBarColor = getColor(R.color.background)
+
+        mainScroll = findViewById(R.id.mainScroll)
+        expenseButton = findViewById(R.id.expenseButton)
+        incomeButton = findViewById(R.id.incomeButton)
+        descriptionInput = findViewById(R.id.descriptionInput)
+        valueInput = findViewById(R.id.valueInput)
+        balanceText = findViewById(R.id.balanceText)
+        incomeTotalText = findViewById(R.id.incomeTotalText)
+        expenseTotalText = findViewById(R.id.expenseTotalText)
+        emptyStateText = findViewById(R.id.emptyStateText)
+        movementsContainer = findViewById(R.id.movementsContainer)
+        historySection = findViewById(R.id.historySection)
+
+        findViewById<TextView>(R.id.monthText).text = formatarMesAtual()
+
+        expenseButton.setOnClickListener {
+            selecionarTipo(TipoMovimentacao.GASTO)
+        }
+
+        incomeButton.setOnClickListener {
+            selecionarTipo(TipoMovimentacao.GANHO)
+        }
+
+        findViewById<Button>(R.id.registerButton).setOnClickListener {
+            registrarMovimentacao()
+        }
+
+        selecionarTipo(TipoMovimentacao.GASTO)
+        atualizarResumo()
+        renderizarMovimentacoes()
+    }
+
+    private fun selecionarTipo(tipo: TipoMovimentacao) {
+        tipoSelecionado = tipo
+
+        val gastoSelecionado = tipo == TipoMovimentacao.GASTO
+
+        expenseButton.text = if (gastoSelecionado) "✓ GASTOU" else "GASTOU"
+        incomeButton.text = if (!gastoSelecionado) "✓ GANHOU" else "GANHOU"
+
+        expenseButton.backgroundTintList = ColorStateList.valueOf(
+            getColor(if (gastoSelecionado) R.color.expense else R.color.unselected)
+        )
+        incomeButton.backgroundTintList = ColorStateList.valueOf(
+            getColor(if (!gastoSelecionado) R.color.income else R.color.unselected)
+        )
+
+        expenseButton.setTextColor(
+            getColor(if (gastoSelecionado) R.color.white else R.color.text_primary)
+        )
+        incomeButton.setTextColor(
+            getColor(if (!gastoSelecionado) R.color.white else R.color.text_primary)
+        )
+    }
+
+    private fun registrarMovimentacao() {
+        val descricao = descriptionInput.text.toString().trim()
+        val valorCentavos = parseValorCentavos(valueInput.text.toString())
+
+        if (descricao.isBlank()) {
+            descriptionInput.error = "Digite o nome da movimentação"
+            descriptionInput.requestFocus()
+            return
+        }
+
+        if (valorCentavos == null || valorCentavos <= 0) {
+            valueInput.error = "Digite um valor maior que zero"
+            valueInput.requestFocus()
+            return
+        }
+
+        movimentacoes.add(
+            0,
+            Movimentacao(
+                id = System.currentTimeMillis(),
+                tipo = tipoSelecionado,
+                descricao = descricao,
+                valorCentavos = valorCentavos
+            )
+        )
+
+        descriptionInput.text.clear()
+        valueInput.text.clear()
+        descriptionInput.requestFocus()
+
+        atualizarResumo()
+        renderizarMovimentacoes()
+
+        Toast.makeText(this, "Movimentação registrada", Toast.LENGTH_SHORT).show()
+
+        historySection.post {
+            mainScroll.smoothScrollTo(0, historySection.top)
+        }
+    }
+
+    private fun atualizarResumo() {
+        val totalGanhos = movimentacoes
+            .filter { it.tipo == TipoMovimentacao.GANHO }
+            .sumOf { it.valorCentavos }
+
+        val totalGastos = movimentacoes
+            .filter { it.tipo == TipoMovimentacao.GASTO }
+            .sumOf { it.valorCentavos }
+
+        val saldo = totalGanhos - totalGastos
+
+        balanceText.text = formatarMoeda(saldo)
+        incomeTotalText.text = formatarMoeda(totalGanhos)
+        expenseTotalText.text = formatarMoeda(totalGastos)
+
+        balanceText.setTextColor(
+            getColor(
+                when {
+                    saldo > 0 -> R.color.income
+                    saldo < 0 -> R.color.expense
+                    else -> R.color.text_primary
+                }
+            )
+        )
+    }
+
+    private fun renderizarMovimentacoes() {
+        movementsContainer.removeAllViews()
+
+        emptyStateText.visibility = if (movimentacoes.isEmpty()) View.VISIBLE else View.GONE
+
+        val inflater = LayoutInflater.from(this)
+        val dateFormatter = DateTimeFormatter.ofPattern("dd/MM • HH:mm", localeBrasil)
+
+        movimentacoes.forEach { movimentacao ->
+            val row = inflater.inflate(
+                R.layout.item_movimentacao,
+                movementsContainer,
+                false
+            )
+
+            row.findViewById<TextView>(R.id.movementDescription).text =
+                movimentacao.descricao
+
+            val tipoTexto = if (movimentacao.tipo == TipoMovimentacao.GASTO) {
+                "Gasto"
+            } else {
+                "Ganho"
+            }
+
+            row.findViewById<TextView>(R.id.movementMeta).text =
+                "${tipoTexto} • ${movimentacao.data.format(dateFormatter)}"
+
+            val amountText = row.findViewById<TextView>(R.id.movementAmount)
+            val sinal = if (movimentacao.tipo == TipoMovimentacao.GASTO) "-" else "+"
+            amountText.text = "${sinal} ${formatarMoeda(movimentacao.valorCentavos)}"
+            amountText.setTextColor(
+                getColor(
+                    if (movimentacao.tipo == TipoMovimentacao.GASTO) {
+                        R.color.expense
+                    } else {
+                        R.color.income
+                    }
+                )
+            )
+
+            movementsContainer.addView(row)
+        }
+    }
+
+    private fun parseValorCentavos(valorDigitado: String): Long? {
+        val limpo = valorDigitado
+            .replace("R$", "", ignoreCase = true)
+            .replace(" ", "")
+            .filter { it.isDigit() || it == ',' || it == '.' }
+
+        if (limpo.isBlank()) return null
+
+        val ultimoSeparador = maxOf(limpo.lastIndexOf(','), limpo.lastIndexOf('.'))
+        val casasDecimais = if (ultimoSeparador >= 0) {
+            limpo.length - ultimoSeparador - 1
+        } else {
+            0
+        }
+
+        val apenasDigitos = limpo.filter { it.isDigit() }
+        val numero = apenasDigitos.toLongOrNull() ?: return null
+
+        return when {
+            ultimoSeparador >= 0 && casasDecimais == 1 -> numero * 10
+            ultimoSeparador >= 0 && casasDecimais == 2 -> numero
+            else -> numero * 100
+        }
+    }
+
+    private fun formatarMoeda(valorCentavos: Long): String {
+        return moeda.format(BigDecimal.valueOf(valorCentavos, 2))
+    }
+
+    private fun formatarMesAtual(): String {
+        val formato = DateTimeFormatter.ofPattern("MMMM 'de' yyyy", localeBrasil)
+        return LocalDate.now()
+            .format(formato)
+            .replaceFirstChar { it.uppercase(localeBrasil) }
     }
 }

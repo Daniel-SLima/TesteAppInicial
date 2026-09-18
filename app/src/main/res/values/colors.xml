@@ -1,0 +1,12 @@
+<resources>
+    <color name="background">#F6F7F8</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="text_primary">#171A1F</color>
+    <color name="text_secondary">#69707A</color>
+    <color name="border">#E4E7EB</color>
+    <color name="unselected">#EEF1F4</color>
+    <color name="accent">#1F6FEB</color>
+    <color name="income">#146C43</color>
+    <color name="expense">#B3261E</color>
+    <color name="white">#FFFFFF</color>
+</resources>

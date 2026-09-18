@@ -1,4 +1,18 @@
 <resources>
-    <string name="app_name">Teste App Inicial</string>
-    <string name="initial_status">Preparando aplicativo…</string>
+    <string name="app_name">Entrou / Saiu</string>
+    <string name="movement_question">Gastou ou ganhou?</string>
+    <string name="quick_register_hint">Registre uma movimentação em poucos segundos.</string>
+    <string name="spent">Gastou</string>
+    <string name="earned">Ganhou</string>
+    <string name="description_label">Nome</string>
+    <string name="description_hint">Ex.: Mercado, salário, almoço…</string>
+    <string name="value_label">Valor</string>
+    <string name="value_hint">R$ 0,00</string>
+    <string name="register">Registrar</string>
+    <string name="month_summary">Seu mês</string>
+    <string name="current_balance">Saldo atual</string>
+    <string name="income_total">Entradas</string>
+    <string name="expense_total">Gastos</string>
+    <string name="movements">Movimentações</string>
+    <string name="empty_state">Nenhuma movimentação registrada ainda.</string>
 </resources>
