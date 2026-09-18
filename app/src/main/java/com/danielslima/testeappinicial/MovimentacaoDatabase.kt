@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.util.UUID
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -48,6 +49,18 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                 "ALTER TABLE $TABELA_RECORRENCIAS ADD COLUMN $COLUNA_CATEGORIA TEXT NOT NULL DEFAULT 'Outros'"
             )
         }
+
+        if (oldVersion < 5) {
+            db.execSQL(
+                "ALTER TABLE $TABELA_MOVIMENTACOES ADD COLUMN $COLUNA_PARCELAMENTO_ID TEXT"
+            )
+            db.execSQL(
+                "ALTER TABLE $TABELA_MOVIMENTACOES ADD COLUMN $COLUNA_PARCELA_NUMERO INTEGER"
+            )
+            db.execSQL(
+                "ALTER TABLE $TABELA_MOVIMENTACOES ADD COLUMN $COLUNA_PARCELAS_TOTAL INTEGER"
+            )
+        }
     }
 
     private fun criarTabelaMovimentacoes(db: SQLiteDatabase) {
@@ -62,7 +75,10 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                 $COLUNA_RECORRENCIA_ID INTEGER,
                 $COLUNA_COMPETENCIA TEXT,
                 $COLUNA_STATUS TEXT NOT NULL DEFAULT 'REALIZADO',
-                $COLUNA_CATEGORIA TEXT NOT NULL DEFAULT 'Outros'
+                $COLUNA_CATEGORIA TEXT NOT NULL DEFAULT 'Outros',
+                $COLUNA_PARCELAMENTO_ID TEXT,
+                $COLUNA_PARCELA_NUMERO INTEGER,
+                $COLUNA_PARCELAS_TOTAL INTEGER
             )
             """.trimIndent()
         )
@@ -157,6 +173,92 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
             "$COLUNA_ID = ?",
             arrayOf(id.toString())
         ) > 0
+    }
+
+    fun inserirParcelamento(
+        descricao: String,
+        valorTotalCentavos: Long,
+        categoria: String,
+        quantidadeParcelas: Int,
+        diaVencimento: Int,
+        mesReferencia: YearMonth = YearMonth.now()
+    ): List<Movimentacao> {
+        require(quantidadeParcelas >= 2) {
+            "Parcelamento deve ter pelo menos 2 parcelas."
+        }
+        require(diaVencimento in 1..31) {
+            "Dia de vencimento inválido."
+        }
+        require(valorTotalCentavos > 0) {
+            "Valor inválido."
+        }
+
+        val hoje = LocalDateTime.now()
+        val primeiroMes = if (diaVencimento >= hoje.dayOfMonth) {
+            mesReferencia
+        } else {
+            mesReferencia.plusMonths(1)
+        }
+
+        val valorBase = valorTotalCentavos / quantidadeParcelas
+        val resto = valorTotalCentavos % quantidadeParcelas
+        val parcelamentoId = UUID.randomUUID().toString()
+        val resultado = mutableListOf<Movimentacao>()
+
+        val db = writableDatabase
+        db.beginTransaction()
+
+        try {
+            for (indice in 0 until quantidadeParcelas) {
+                val numeroParcela = indice + 1
+                val mes = primeiroMes.plusMonths(indice.toLong())
+                val diaReal = minOf(diaVencimento, mes.lengthOfMonth())
+                val data = mes.atDay(diaReal).atTime(12, 0)
+                val valorParcela = valorBase + if (indice < resto) 1 else 0
+
+                val values = ContentValues().apply {
+                    put(COLUNA_TIPO, TipoMovimentacao.GASTO.name)
+                    put(
+                        COLUNA_DESCRICAO,
+                        "$descricao ($numeroParcela/$quantidadeParcelas)"
+                    )
+                    put(COLUNA_VALOR_CENTAVOS, valorParcela)
+                    put(COLUNA_DATA, data.toString())
+                    put(COLUNA_STATUS, StatusMovimentacao.PENDENTE.name)
+                    put(COLUNA_CATEGORIA, categoria)
+                    put(COLUNA_PARCELAMENTO_ID, parcelamentoId)
+                    put(COLUNA_PARCELA_NUMERO, numeroParcela)
+                    put(COLUNA_PARCELAS_TOTAL, quantidadeParcelas)
+                }
+
+                val id = db.insertOrThrow(
+                    TABELA_MOVIMENTACOES,
+                    null,
+                    values
+                )
+
+                resultado.add(
+                    Movimentacao(
+                        id = id,
+                        tipo = TipoMovimentacao.GASTO,
+                        descricao = "$descricao ($numeroParcela/$quantidadeParcelas)",
+                        valorCentavos = valorParcela,
+                        data = data,
+                        status = StatusMovimentacao.PENDENTE,
+                        categoria = categoria,
+                        parcelamentoId = parcelamentoId,
+                        parcelaNumero = numeroParcela,
+                        parcelasTotal = quantidadeParcelas
+                    )
+                )
+            }
+
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+
+        return resultado
     }
 
     fun inserirRecorrencia(
@@ -440,7 +542,10 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                 COLUNA_RECORRENCIA_ID,
                 COLUNA_COMPETENCIA,
                 COLUNA_STATUS,
-                COLUNA_CATEGORIA
+                COLUNA_CATEGORIA,
+                COLUNA_PARCELAMENTO_ID,
+                COLUNA_PARCELA_NUMERO,
+                COLUNA_PARCELAS_TOTAL
             ),
             null,
             null,
@@ -457,6 +562,12 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
             val competenciaIndex = cursor.getColumnIndexOrThrow(COLUNA_COMPETENCIA)
             val statusIndex = cursor.getColumnIndexOrThrow(COLUNA_STATUS)
             val categoriaIndex = cursor.getColumnIndexOrThrow(COLUNA_CATEGORIA)
+            val parcelamentoIndex =
+                cursor.getColumnIndexOrThrow(COLUNA_PARCELAMENTO_ID)
+            val parcelaNumeroIndex =
+                cursor.getColumnIndexOrThrow(COLUNA_PARCELA_NUMERO)
+            val parcelasTotalIndex =
+                cursor.getColumnIndexOrThrow(COLUNA_PARCELAS_TOTAL)
 
             while (cursor.moveToNext()) {
                 movimentacoes.put(
@@ -484,6 +595,30 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                         )
                         put("status", cursor.getString(statusIndex))
                         put("categoria", cursor.getString(categoriaIndex))
+                        put(
+                            "parcelamentoId",
+                            if (cursor.isNull(parcelamentoIndex)) {
+                                JSONObject.NULL
+                            } else {
+                                cursor.getString(parcelamentoIndex)
+                            }
+                        )
+                        put(
+                            "parcelaNumero",
+                            if (cursor.isNull(parcelaNumeroIndex)) {
+                                JSONObject.NULL
+                            } else {
+                                cursor.getInt(parcelaNumeroIndex)
+                            }
+                        )
+                        put(
+                            "parcelasTotal",
+                            if (cursor.isNull(parcelasTotalIndex)) {
+                                JSONObject.NULL
+                            } else {
+                                cursor.getInt(parcelasTotalIndex)
+                            }
+                        )
                     }
                 )
             }
@@ -497,7 +632,7 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
     fun restaurarBackupJson(conteudo: String): Boolean {
         val root = JSONObject(conteudo)
         val formato = root.getInt("formato")
-        require(formato == BACKUP_FORMAT_VERSION) {
+        require(formato in 1..BACKUP_FORMAT_VERSION) {
             "Formato de backup não suportado."
         }
 
@@ -557,6 +692,24 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                         )
                     )
                     put(COLUNA_CATEGORIA, item.optString("categoria", "Outros"))
+
+                    if (item.has("parcelamentoId") && !item.isNull("parcelamentoId")) {
+                        put(COLUNA_PARCELAMENTO_ID, item.getString("parcelamentoId"))
+                    } else {
+                        putNull(COLUNA_PARCELAMENTO_ID)
+                    }
+
+                    if (item.has("parcelaNumero") && !item.isNull("parcelaNumero")) {
+                        put(COLUNA_PARCELA_NUMERO, item.getInt("parcelaNumero"))
+                    } else {
+                        putNull(COLUNA_PARCELA_NUMERO)
+                    }
+
+                    if (item.has("parcelasTotal") && !item.isNull("parcelasTotal")) {
+                        put(COLUNA_PARCELAS_TOTAL, item.getInt("parcelasTotal"))
+                    } else {
+                        putNull(COLUNA_PARCELAS_TOTAL)
+                    }
                 }
 
                 db.insertOrThrow(TABELA_MOVIMENTACOES, null, values)
@@ -609,7 +762,10 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                 COLUNA_DATA,
                 COLUNA_RECORRENCIA_ID,
                 COLUNA_STATUS,
-                COLUNA_CATEGORIA
+                COLUNA_CATEGORIA,
+                COLUNA_PARCELAMENTO_ID,
+                COLUNA_PARCELA_NUMERO,
+                COLUNA_PARCELAS_TOTAL
             ),
             selection,
             selectionArgs,
@@ -625,12 +781,33 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
             val recorrenciaIndex = cursor.getColumnIndexOrThrow(COLUNA_RECORRENCIA_ID)
             val statusIndex = cursor.getColumnIndexOrThrow(COLUNA_STATUS)
             val categoriaIndex = cursor.getColumnIndexOrThrow(COLUNA_CATEGORIA)
+            val parcelamentoIndex =
+                cursor.getColumnIndexOrThrow(COLUNA_PARCELAMENTO_ID)
+            val parcelaNumeroIndex =
+                cursor.getColumnIndexOrThrow(COLUNA_PARCELA_NUMERO)
+            val parcelasTotalIndex =
+                cursor.getColumnIndexOrThrow(COLUNA_PARCELAS_TOTAL)
 
             while (cursor.moveToNext()) {
                 val recorrenciaId = if (cursor.isNull(recorrenciaIndex)) {
                     null
                 } else {
                     cursor.getLong(recorrenciaIndex)
+                }
+                val parcelamentoId = if (cursor.isNull(parcelamentoIndex)) {
+                    null
+                } else {
+                    cursor.getString(parcelamentoIndex)
+                }
+                val parcelaNumero = if (cursor.isNull(parcelaNumeroIndex)) {
+                    null
+                } else {
+                    cursor.getInt(parcelaNumeroIndex)
+                }
+                val parcelasTotal = if (cursor.isNull(parcelasTotalIndex)) {
+                    null
+                } else {
+                    cursor.getInt(parcelasTotalIndex)
                 }
 
                 resultado.add(
@@ -642,7 +819,10 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                         data = LocalDateTime.parse(cursor.getString(dataIndex)),
                         recorrenciaId = recorrenciaId,
                         status = StatusMovimentacao.valueOf(cursor.getString(statusIndex)),
-                        categoria = cursor.getString(categoriaIndex)
+                        categoria = cursor.getString(categoriaIndex),
+                        parcelamentoId = parcelamentoId,
+                        parcelaNumero = parcelaNumero,
+                        parcelasTotal = parcelasTotal
                     )
                 )
             }
@@ -653,8 +833,8 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
 
     companion object {
         private const val DATABASE_NAME = "entrou_saiu.db"
-        private const val DATABASE_VERSION = 4
-        private const val BACKUP_FORMAT_VERSION = 1
+        private const val DATABASE_VERSION = 5
+        private const val BACKUP_FORMAT_VERSION = 2
 
         private const val TABELA_MOVIMENTACOES = "movimentacoes"
         private const val TABELA_RECORRENCIAS = "recorrencias"
@@ -668,6 +848,9 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         private const val COLUNA_COMPETENCIA = "competencia"
         private const val COLUNA_STATUS = "status"
         private const val COLUNA_CATEGORIA = "categoria"
+        private const val COLUNA_PARCELAMENTO_ID = "parcelamento_id"
+        private const val COLUNA_PARCELA_NUMERO = "parcela_numero"
+        private const val COLUNA_PARCELAS_TOTAL = "parcelas_total"
         private const val COLUNA_DIA_MES = "dia_mes"
         private const val COLUNA_INICIO_MES = "inicio_mes"
         private const val COLUNA_ATIVA = "ativa"

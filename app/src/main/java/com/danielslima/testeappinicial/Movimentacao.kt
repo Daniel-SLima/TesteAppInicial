@@ -20,5 +20,8 @@ data class Movimentacao(
     val data: LocalDateTime = LocalDateTime.now(),
     val recorrenciaId: Long? = null,
     val status: StatusMovimentacao = StatusMovimentacao.REALIZADO,
-    val categoria: String = "Outros"
+    val categoria: String = "Outros",
+    val parcelamentoId: String? = null,
+    val parcelaNumero: Int? = null,
+    val parcelasTotal: Int? = null
 )

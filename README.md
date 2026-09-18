@@ -28,7 +28,7 @@ O app separa saldo inicial, saldo realizado, saldo previsto, recebido, pago, a r
 
 ## Build
 
-O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.12.0.apk`.
+O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.13.0.apk`.
 
 ## Estado
 
@@ -83,3 +83,13 @@ Sem os Secrets, o workflow continua verde, mas gera um APK explicitamente marcad
 - O backup inclui movimentações, lançamentos fixos ativos/inativos e a preferência de carregar saldo entre meses.
 - A restauração é transacional: arquivo inválido ou incompatível não apaga o banco atual.
 - Tudo continua offline e sem servidor externo.
+
+
+## Versão 0.13.0
+
+- Gastos podem ser parcelados entre 2 e 60 vezes.
+- O valor informado é tratado como valor total e distribuído em centavos sem perda de precisão.
+- Cada parcela é criada como pendente no mês correspondente e entra automaticamente no saldo previsto.
+- Se o dia de vencimento do mês atual já passou, a primeira parcela começa no mês seguinte.
+- A lista e o CSV identificam o número da parcela, por exemplo `Parcela 3/10`.
+- Backup v2 preserva os dados de parcelamento e continua aceitando backups v1 da versão anterior.

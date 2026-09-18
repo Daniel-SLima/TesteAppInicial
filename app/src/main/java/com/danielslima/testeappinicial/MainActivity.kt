@@ -44,6 +44,10 @@ class MainActivity : Activity() {
     private lateinit var descriptionInput: EditText
     private lateinit var valueInput: EditText
     private lateinit var categorySpinner: Spinner
+    private lateinit var installmentCheckBox: CheckBox
+    private lateinit var installmentOptions: LinearLayout
+    private lateinit var installmentCountInput: EditText
+    private lateinit var installmentDayInput: EditText
     private lateinit var recurringCheckBox: CheckBox
     private lateinit var recurringOptions: LinearLayout
     private lateinit var recurringDayInput: EditText
@@ -85,6 +89,10 @@ class MainActivity : Activity() {
         descriptionInput = findViewById(R.id.descriptionInput)
         valueInput = findViewById(R.id.valueInput)
         categorySpinner = findViewById(R.id.categorySpinner)
+        installmentCheckBox = findViewById(R.id.installmentCheckBox)
+        installmentOptions = findViewById(R.id.installmentOptions)
+        installmentCountInput = findViewById(R.id.installmentCountInput)
+        installmentDayInput = findViewById(R.id.installmentDayInput)
         recurringCheckBox = findViewById(R.id.recurringCheckBox)
         recurringOptions = findViewById(R.id.recurringOptions)
         recurringDayInput = findViewById(R.id.recurringDayInput)
@@ -117,9 +125,21 @@ class MainActivity : Activity() {
 
         configurarFiltros()
         recurringDayInput.setText(LocalDate.now().dayOfMonth.toString())
+        installmentCountInput.setText("2")
+        installmentDayInput.setText(LocalDate.now().dayOfMonth.toString())
+
+        installmentCheckBox.setOnCheckedChangeListener { _, checked ->
+            installmentOptions.visibility = if (checked) View.VISIBLE else View.GONE
+            if (checked) {
+                recurringCheckBox.isChecked = false
+            }
+        }
 
         recurringCheckBox.setOnCheckedChangeListener { _, checked ->
             recurringOptions.visibility = if (checked) View.VISIBLE else View.GONE
+            if (checked) {
+                installmentCheckBox.isChecked = false
+            }
         }
 
         carryBalanceCheckBox.isChecked = preferencias.getBoolean(
@@ -307,6 +327,14 @@ class MainActivity : Activity() {
         incomeButton.setTextColor(
             getColor(if (!gastoSelecionado) R.color.white else R.color.text_primary)
         )
+
+        installmentCheckBox.visibility =
+            if (gastoSelecionado) View.VISIBLE else View.GONE
+
+        if (!gastoSelecionado) {
+            installmentCheckBox.isChecked = false
+            installmentOptions.visibility = View.GONE
+        }
     }
 
     private fun registrarMovimentacao() {
@@ -326,11 +354,69 @@ class MainActivity : Activity() {
             return
         }
 
-        if (recurringCheckBox.isChecked) {
+        if (
+            tipoSelecionado == TipoMovimentacao.GASTO &&
+            installmentCheckBox.isChecked
+        ) {
+            registrarParcelamento(descricao, valorCentavos, categoria)
+        } else if (recurringCheckBox.isChecked) {
             registrarRecorrencia(descricao, valorCentavos, categoria)
         } else {
             registrarMovimentacaoUnica(descricao, valorCentavos, categoria)
         }
+    }
+
+    private fun registrarParcelamento(
+        descricao: String,
+        valorTotalCentavos: Long,
+        categoria: String
+    ) {
+        val quantidade = installmentCountInput.text.toString().toIntOrNull()
+        val dia = installmentDayInput.text.toString().toIntOrNull()
+
+        if (quantidade == null || quantidade !in 2..60) {
+            installmentCountInput.error = "Use entre 2 e 60 parcelas"
+            installmentCountInput.requestFocus()
+            return
+        }
+
+        if (dia == null || dia !in 1..31) {
+            installmentDayInput.error = "Use um dia entre 1 e 31"
+            installmentDayInput.requestFocus()
+            return
+        }
+
+        val parcelas = try {
+            database.inserirParcelamento(
+                descricao = descricao,
+                valorTotalCentavos = valorTotalCentavos,
+                categoria = categoria,
+                quantidadeParcelas = quantidade,
+                diaVencimento = dia
+            )
+        } catch (erro: Exception) {
+            Toast.makeText(
+                this,
+                "Não foi possível criar o parcelamento.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val primeiraParcela = parcelas.firstOrNull()
+        if (primeiraParcela != null) {
+            mesSelecionado = YearMonth.from(primeiraParcela.data)
+        }
+
+        limparFormulario()
+        recarregarInterface()
+
+        Toast.makeText(
+            this,
+            "Parcelamento criado em $quantidade parcelas",
+            Toast.LENGTH_SHORT
+        ).show()
+        rolarParaHistorico()
     }
 
     private fun registrarMovimentacaoUnica(
@@ -406,6 +492,9 @@ class MainActivity : Activity() {
         descriptionInput.text.clear()
         valueInput.text.clear()
         categorySpinner.setSelection(CATEGORIAS.indexOf("Outros"))
+        installmentCheckBox.isChecked = false
+        installmentCountInput.setText("2")
+        installmentDayInput.setText(LocalDate.now().dayOfMonth.toString())
         recurringCheckBox.isChecked = false
         recurringDayInput.setText(LocalDate.now().dayOfMonth.toString())
         descriptionInput.requestFocus()
@@ -1086,7 +1175,7 @@ class MainActivity : Activity() {
             output.bufferedWriter(Charsets.UTF_8).use { writer ->
                 writer.write("\uFEFF")
                 writer.write(
-                    "Data;Tipo;Status;Categoria;Descrição;Valor;Fixo\n"
+                    "Data;Tipo;Status;Categoria;Descrição;Valor;Fixo;Parcela\n"
                 )
 
                 movimentacoes
@@ -1132,7 +1221,15 @@ class MainActivity : Activity() {
                             movimentacao.categoria,
                             movimentacao.descricao,
                             valorTexto,
-                            if (movimentacao.recorrenciaId != null) "Sim" else "Não"
+                            if (movimentacao.recorrenciaId != null) "Sim" else "Não",
+                            if (
+                                movimentacao.parcelaNumero != null &&
+                                movimentacao.parcelasTotal != null
+                            ) {
+                                "${movimentacao.parcelaNumero}/${movimentacao.parcelasTotal}"
+                            } else {
+                                ""
+                            }
                         ).joinToString(";") { csvCampo(it) }
 
                         writer.write(linha)
@@ -1243,6 +1340,14 @@ class MainActivity : Activity() {
                 "Ganho"
             }
             val fixoTexto = if (movimentacao.recorrenciaId != null) " • Fixo" else ""
+            val parcelaTexto = if (
+                movimentacao.parcelaNumero != null &&
+                movimentacao.parcelasTotal != null
+            ) {
+                " • Parcela ${movimentacao.parcelaNumero}/${movimentacao.parcelasTotal}"
+            } else {
+                ""
+            }
             val statusTexto = when {
                 movimentacao.tipo == TipoMovimentacao.GASTO &&
                     movimentacao.status == StatusMovimentacao.REALIZADO -> "Pago"
@@ -1252,7 +1357,7 @@ class MainActivity : Activity() {
             }
 
             row.findViewById<TextView>(R.id.movementMeta).text =
-                "${movimentacao.categoria} • ${tipoTexto}${fixoTexto} • $statusTexto • ${movimentacao.data.format(dateFormatter)}"
+                "${movimentacao.categoria} • ${tipoTexto}${fixoTexto}${parcelaTexto} • $statusTexto • ${movimentacao.data.format(dateFormatter)}"
 
             val amountText = row.findViewById<TextView>(R.id.movementAmount)
             val sinal = if (movimentacao.tipo == TipoMovimentacao.GASTO) "-" else "+"
