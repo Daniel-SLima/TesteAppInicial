@@ -71,4 +71,7 @@
     <string name="cancel">Cancelar</string>
     <string name="save">Salvar</string>
     <string name="remove_limit">Remover limite</string>
+    <string name="recurring_manager_title">Fixos mensais</string>
+    <string name="recurring_manager_subtitle">Seus lançamentos que se repetem automaticamente mês a mês.</string>
+    <string name="recurring_manager_empty">Você ainda não tem nenhum gasto ou ganho fixo.</string>
 </resources>

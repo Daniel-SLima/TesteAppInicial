@@ -698,31 +698,140 @@ class MainActivity : Activity() {
         val recorrencias = try {
             database.listarRecorrenciasAtivas()
         } catch (erro: SQLiteException) {
-            Toast.makeText(this, "Não foi possível carregar os fixos.", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this,
+                "Não foi possível carregar os fixos.",
+                Toast.LENGTH_LONG
+            ).show()
             return
         }
+
+        val view = layoutInflater.inflate(
+            R.layout.dialog_vira_recurring_manager,
+            null
+        )
+        val recurringContainer =
+            view.findViewById<LinearLayout>(R.id.recurringManagerContainer)
+        val emptyText =
+            view.findViewById<TextView>(R.id.recurringManagerEmptyText)
+        val closeButton =
+            view.findViewById<TextView>(R.id.recurringManagerCloseButton)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
 
         if (recorrencias.isEmpty()) {
-            AlertDialog.Builder(this)
-                .setTitle("Fixos mensais")
-                .setMessage("Você ainda não cadastrou nenhum gasto ou ganho fixo.")
-                .setPositiveButton("OK", null)
-                .show()
-            return
+            emptyText.visibility = View.VISIBLE
+        } else {
+            emptyText.visibility = View.GONE
+
+            recorrencias.forEachIndexed { index, recorrencia ->
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    minimumHeight = dp(70)
+                    setPadding(dp(12), dp(8), dp(10), dp(8))
+                    setBackgroundResource(R.drawable.vira_dialog_row)
+                    isClickable = true
+                    isFocusable = true
+                }
+
+                val textos = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                }
+
+                textos.addView(
+                    TextView(this).apply {
+                        text = recorrencia.descricao
+                        textSize = 14f
+                        setTextColor(getColor(R.color.text_primary))
+                        setTypeface(
+                            typeface,
+                            android.graphics.Typeface.BOLD
+                        )
+                    }
+                )
+
+                val tipo = if (
+                    recorrencia.tipo == TipoMovimentacao.GASTO
+                ) {
+                    "Gasto"
+                } else {
+                    "Ganho"
+                }
+
+                textos.addView(
+                    TextView(this).apply {
+                        text =
+                            "${recorrencia.categoria} • $tipo • dia ${recorrencia.diaMes}"
+                        textSize = 12f
+                        setTextColor(getColor(R.color.text_secondary))
+                    }
+                )
+
+                row.addView(
+                    textos,
+                    LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
+                )
+
+                row.addView(
+                    TextView(this).apply {
+                        text = formatarMoeda(recorrencia.valorCentavos)
+                        textSize = 13f
+                        setTextColor(
+                            getColor(
+                                if (
+                                    recorrencia.tipo ==
+                                    TipoMovimentacao.GASTO
+                                ) {
+                                    R.color.expense
+                                } else {
+                                    R.color.income
+                                }
+                            )
+                        )
+                        setTypeface(
+                            typeface,
+                            android.graphics.Typeface.BOLD
+                        )
+                    }
+                )
+
+                row.setOnClickListener {
+                    dialog.dismiss()
+                    abrirDetalheRecorrencia(recorrencia)
+                }
+
+                recurringContainer.addView(row)
+
+                if (index < recorrencias.lastIndex) {
+                    recurringContainer.addView(
+                        View(this).apply {
+                            setBackgroundColor(getColor(R.color.border))
+                        },
+                        LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            dp(1)
+                        ).apply {
+                            marginStart = dp(12)
+                            marginEnd = dp(12)
+                        }
+                    )
+                }
+            }
         }
 
-        val itens = recorrencias.map { recorrencia ->
-            val tipo = if (recorrencia.tipo == TipoMovimentacao.GASTO) "Gasto" else "Ganho"
-            "${recorrencia.descricao} • ${recorrencia.categoria} • $tipo • ${formatarMoeda(recorrencia.valorCentavos)} • dia ${recorrencia.diaMes}"
-        }.toTypedArray()
+        closeButton.setOnClickListener {
+            dialog.dismiss()
+        }
 
-        AlertDialog.Builder(this)
-            .setTitle("Fixos mensais")
-            .setItems(itens) { _, position ->
-                abrirDetalheRecorrencia(recorrencias[position])
-            }
-            .setNegativeButton("Fechar", null)
-            .show()
+        dialog.show()
+        aplicarEstiloDialogVira(dialog)
     }
 
     private fun abrirDetalheRecorrencia(recorrencia: Recorrencia) {
