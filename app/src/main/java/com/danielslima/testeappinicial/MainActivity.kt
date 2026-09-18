@@ -2,6 +2,7 @@ package com.danielslima.testeappinicial
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.KeyguardManager
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
@@ -52,6 +53,7 @@ class MainActivity : Activity() {
     private lateinit var recurringOptions: LinearLayout
     private lateinit var recurringDayInput: EditText
     private lateinit var carryBalanceCheckBox: CheckBox
+    private lateinit var securityCheckBox: CheckBox
     private lateinit var monthText: TextView
     private lateinit var monthStateText: TextView
     private lateinit var initialBalanceText: TextView
@@ -75,6 +77,9 @@ class MainActivity : Activity() {
     private var mesSelecionado = YearMonth.now()
     private var mesAtualReferencia = YearMonth.now()
     private var mesExportacaoPendente: YearMonth? = null
+    private var autenticadoNestaSessao = false
+    private var autenticacaoEmAndamento = false
+    private var alterandoProtecao = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,6 +102,7 @@ class MainActivity : Activity() {
         recurringOptions = findViewById(R.id.recurringOptions)
         recurringDayInput = findViewById(R.id.recurringDayInput)
         carryBalanceCheckBox = findViewById(R.id.carryBalanceCheckBox)
+        securityCheckBox = findViewById(R.id.securityCheckBox)
         monthText = findViewById(R.id.monthText)
         monthStateText = findViewById(R.id.monthStateText)
         initialBalanceText = findViewById(R.id.initialBalanceText)
@@ -151,6 +157,46 @@ class MainActivity : Activity() {
                 .putBoolean(CHAVE_CARREGAR_SALDO, checked)
                 .apply()
             atualizarResumo()
+        }
+
+        securityCheckBox.isChecked = preferencias.getBoolean(
+            CHAVE_PROTEGER_APP,
+            false
+        )
+        securityCheckBox.setOnCheckedChangeListener { _, checked ->
+            if (alterandoProtecao) {
+                return@setOnCheckedChangeListener
+            }
+
+            if (checked) {
+                val keyguard = getSystemService(KeyguardManager::class.java)
+
+                if (!keyguard.isDeviceSecure) {
+                    alterandoProtecao = true
+                    securityCheckBox.isChecked = false
+                    alterandoProtecao = false
+
+                    Toast.makeText(
+                        this,
+                        "Configure um PIN, padrão ou senha no Android primeiro.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@setOnCheckedChangeListener
+                }
+
+                preferencias.edit()
+                    .putBoolean(CHAVE_PROTEGER_APP, true)
+                    .apply()
+
+                autenticadoNestaSessao = false
+                solicitarAutenticacao()
+            } else {
+                preferencias.edit()
+                    .putBoolean(CHAVE_PROTEGER_APP, false)
+                    .apply()
+
+                autenticadoNestaSessao = true
+            }
         }
 
         findViewById<Button>(R.id.manageRecurringButton).setOnClickListener {
@@ -208,6 +254,27 @@ class MainActivity : Activity() {
                 recarregarInterface()
             }
         }
+
+        if (
+            ::securityCheckBox.isInitialized &&
+            securityCheckBox.isChecked &&
+            !autenticadoNestaSessao &&
+            !autenticacaoEmAndamento
+        ) {
+            solicitarAutenticacao()
+        }
+    }
+
+    override fun onStop() {
+        if (
+            ::securityCheckBox.isInitialized &&
+            securityCheckBox.isChecked &&
+            !autenticacaoEmAndamento
+        ) {
+            autenticadoNestaSessao = false
+        }
+
+        super.onStop()
     }
 
     override fun onDestroy() {
@@ -222,6 +289,17 @@ class MainActivity : Activity() {
         data: Intent?
     ) {
         super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == REQUEST_AUTH_APP) {
+            autenticacaoEmAndamento = false
+
+            if (resultCode == RESULT_OK) {
+                autenticadoNestaSessao = true
+            } else {
+                finish()
+            }
+            return
+        }
 
         if (resultCode != RESULT_OK) return
 
@@ -1050,6 +1128,47 @@ class MainActivity : Activity() {
     }
 
     @Suppress("DEPRECATION")
+    private fun solicitarAutenticacao() {
+        if (autenticacaoEmAndamento) return
+
+        val keyguard = getSystemService(KeyguardManager::class.java)
+
+        if (!keyguard.isDeviceSecure) {
+            preferencias.edit()
+                .putBoolean(CHAVE_PROTEGER_APP, false)
+                .apply()
+
+            alterandoProtecao = true
+            securityCheckBox.isChecked = false
+            alterandoProtecao = false
+            autenticadoNestaSessao = true
+
+            Toast.makeText(
+                this,
+                "Proteção desativada: o aparelho não possui bloqueio seguro.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val intent = keyguard.createConfirmDeviceCredentialIntent(
+            "Desbloquear FinTest",
+            "Confirme o bloqueio do aparelho para acessar suas finanças."
+        )
+
+        if (intent == null) {
+            Toast.makeText(
+                this,
+                "Não foi possível abrir a autenticação do Android.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        autenticacaoEmAndamento = true
+        startActivityForResult(intent, REQUEST_AUTH_APP)
+    }
+
     private fun iniciarExportacaoBackup() {
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
@@ -1437,9 +1556,11 @@ class MainActivity : Activity() {
     companion object {
         private const val PREFERENCIAS = "fintest_preferences"
         private const val CHAVE_CARREGAR_SALDO = "carregar_saldo_entre_meses"
+        private const val CHAVE_PROTEGER_APP = "proteger_app_bloqueio_android"
         private const val REQUEST_EXPORT_CSV = 1201
         private const val REQUEST_EXPORT_BACKUP = 1202
         private const val REQUEST_IMPORT_BACKUP = 1203
+        private const val REQUEST_AUTH_APP = 1204
 
         private val CATEGORIAS = listOf(
             "Alimentação",

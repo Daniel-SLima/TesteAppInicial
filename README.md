@@ -28,7 +28,7 @@ O app separa saldo inicial, saldo realizado, saldo previsto, recebido, pago, a r
 
 ## Build
 
-O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.13.0.apk`.
+O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.14.0.apk`.
 
 ## Estado
 
@@ -93,3 +93,13 @@ Sem os Secrets, o workflow continua verde, mas gera um APK explicitamente marcad
 - Se o dia de vencimento do mês atual já passou, a primeira parcela começa no mês seguinte.
 - A lista e o CSV identificam o número da parcela, por exemplo `Parcela 3/10`.
 - Backup v2 preserva os dados de parcelamento e continua aceitando backups v1 da versão anterior.
+
+
+## Versão 0.14.0
+
+- Tema escuro automático usando o modo claro/escuro configurado no Android.
+- Cores específicas para fundo, cartões, textos, entradas, gastos e campos no modo escuro.
+- Proteção opcional com o bloqueio seguro do próprio Android.
+- Quando ativada, o FinTest exige a confirmação do PIN, padrão ou senha do aparelho ao voltar do segundo plano.
+- O FinTest não armazena o PIN/senha do aparelho.
+- A preferência de proteção não é restaurada automaticamente por backup, evitando bloquear o app em outro aparelho sem confirmação do usuário.

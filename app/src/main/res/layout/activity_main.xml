@@ -599,6 +599,19 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
+            <CheckBox
+                android:id="@+id/securityCheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_card"
+                android:buttonTint="@color/accent"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/protect_app"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
