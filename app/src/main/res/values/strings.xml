@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Entrou / Saiu</string>
+    <string name="app_name">FinTest</string>
     <string name="movement_question">Gastou ou ganhou?</string>
     <string name="quick_register_hint">Registre uma movimentação em poucos segundos.</string>
     <string name="spent">Gastou</string>

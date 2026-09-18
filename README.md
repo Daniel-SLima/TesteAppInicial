@@ -1,4 +1,4 @@
-# Entrou / Saiu
+# FinTest
 
 Mini app Android de finanças pessoais, desenvolvido sem Android Studio.
 
