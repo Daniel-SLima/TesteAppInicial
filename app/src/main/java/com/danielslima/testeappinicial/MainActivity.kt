@@ -141,6 +141,14 @@ class MainActivity : Activity() {
             iniciarExportacaoCsv()
         }
 
+        findViewById<Button>(R.id.backupButton).setOnClickListener {
+            iniciarExportacaoBackup()
+        }
+
+        findViewById<Button>(R.id.restoreBackupButton).setOnClickListener {
+            iniciarImportacaoBackup()
+        }
+
         findViewById<Button>(R.id.previousMonthButton).setOnClickListener {
             mesSelecionado = mesSelecionado.minusMonths(1)
             recarregarInterface()
@@ -195,9 +203,14 @@ class MainActivity : Activity() {
     ) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        if (requestCode == REQUEST_EXPORT_CSV && resultCode == RESULT_OK) {
-            val uri = data?.data ?: return
-            exportarCsv(uri)
+        if (resultCode != RESULT_OK) return
+
+        val uri = data?.data ?: return
+
+        when (requestCode) {
+            REQUEST_EXPORT_CSV -> exportarCsv(uri)
+            REQUEST_EXPORT_BACKUP -> exportarBackup(uri)
+            REQUEST_IMPORT_BACKUP -> prepararRestauracaoBackup(uri)
         }
     }
 
@@ -948,6 +961,106 @@ class MainActivity : Activity() {
     }
 
     @Suppress("DEPRECATION")
+    private fun iniciarExportacaoBackup() {
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+            putExtra(
+                Intent.EXTRA_TITLE,
+                "FinTest-backup-${LocalDate.now()}.json"
+            )
+        }
+
+        startActivityForResult(intent, REQUEST_EXPORT_BACKUP)
+    }
+
+    private fun exportarBackup(uri: Uri) {
+        try {
+            val conteudo = database.criarBackupJson(carryBalanceCheckBox.isChecked)
+            val output = contentResolver.openOutputStream(uri)
+                ?: throw IllegalStateException("Não foi possível abrir o arquivo.")
+
+            output.bufferedWriter(Charsets.UTF_8).use { writer ->
+                writer.write(conteudo)
+            }
+
+            Toast.makeText(
+                this,
+                "Backup do FinTest criado com sucesso",
+                Toast.LENGTH_LONG
+            ).show()
+        } catch (erro: Exception) {
+            Toast.makeText(
+                this,
+                "Não foi possível criar o backup.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun iniciarImportacaoBackup() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+        }
+
+        startActivityForResult(intent, REQUEST_IMPORT_BACKUP)
+    }
+
+    private fun prepararRestauracaoBackup(uri: Uri) {
+        val conteudo = try {
+            contentResolver.openInputStream(uri)
+                ?.bufferedReader(Charsets.UTF_8)
+                ?.use { it.readText() }
+                ?: throw IllegalStateException("Não foi possível abrir o backup.")
+        } catch (erro: Exception) {
+            Toast.makeText(
+                this,
+                "Não foi possível ler o arquivo de backup.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Restaurar backup?")
+            .setMessage(
+                "Os dados atuais do FinTest serão substituídos pelos dados do backup. " +
+                    "Se o arquivo for inválido, nada será alterado."
+            )
+            .setPositiveButton("Restaurar") { _, _ ->
+                restaurarBackup(conteudo)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun restaurarBackup(conteudo: String) {
+        try {
+            val carregarSaldo = database.restaurarBackupJson(conteudo)
+
+            preferencias.edit()
+                .putBoolean(CHAVE_CARREGAR_SALDO, carregarSaldo)
+                .apply()
+
+            carryBalanceCheckBox.isChecked = carregarSaldo
+            mesSelecionado = YearMonth.now()
+            recarregarInterface()
+
+            Toast.makeText(
+                this,
+                "Backup restaurado com sucesso",
+                Toast.LENGTH_LONG
+            ).show()
+        } catch (erro: Exception) {
+            Toast.makeText(
+                this,
+                "Backup inválido ou incompatível. Nenhum dado foi alterado.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     private fun iniciarExportacaoCsv() {
         mesExportacaoPendente = mesSelecionado
 
@@ -1220,6 +1333,8 @@ class MainActivity : Activity() {
         private const val PREFERENCIAS = "fintest_preferences"
         private const val CHAVE_CARREGAR_SALDO = "carregar_saldo_entre_meses"
         private const val REQUEST_EXPORT_CSV = 1201
+        private const val REQUEST_EXPORT_BACKUP = 1202
+        private const val REQUEST_IMPORT_BACKUP = 1203
 
         private val CATEGORIAS = listOf(
             "Alimentação",

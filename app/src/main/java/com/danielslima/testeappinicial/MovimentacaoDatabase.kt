@@ -6,6 +6,8 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import java.time.LocalDateTime
 import java.time.YearMonth
+import org.json.JSONArray
+import org.json.JSONObject
 
 class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
     context,
@@ -375,6 +377,199 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         )
     }
 
+    fun criarBackupJson(carregarSaldo: Boolean): String {
+        val root = JSONObject().apply {
+            put("formato", BACKUP_FORMAT_VERSION)
+            put("criadoEm", LocalDateTime.now().toString())
+            put("carregarSaldo", carregarSaldo)
+        }
+
+        val recorrencias = JSONArray()
+        readableDatabase.query(
+            TABELA_RECORRENCIAS,
+            arrayOf(
+                COLUNA_ID,
+                COLUNA_TIPO,
+                COLUNA_DESCRICAO,
+                COLUNA_VALOR_CENTAVOS,
+                COLUNA_DIA_MES,
+                COLUNA_INICIO_MES,
+                COLUNA_ATIVA,
+                COLUNA_CATEGORIA
+            ),
+            null,
+            null,
+            null,
+            null,
+            "$COLUNA_ID ASC"
+        ).use { cursor ->
+            val idIndex = cursor.getColumnIndexOrThrow(COLUNA_ID)
+            val tipoIndex = cursor.getColumnIndexOrThrow(COLUNA_TIPO)
+            val descricaoIndex = cursor.getColumnIndexOrThrow(COLUNA_DESCRICAO)
+            val valorIndex = cursor.getColumnIndexOrThrow(COLUNA_VALOR_CENTAVOS)
+            val diaIndex = cursor.getColumnIndexOrThrow(COLUNA_DIA_MES)
+            val inicioIndex = cursor.getColumnIndexOrThrow(COLUNA_INICIO_MES)
+            val ativaIndex = cursor.getColumnIndexOrThrow(COLUNA_ATIVA)
+            val categoriaIndex = cursor.getColumnIndexOrThrow(COLUNA_CATEGORIA)
+
+            while (cursor.moveToNext()) {
+                recorrencias.put(
+                    JSONObject().apply {
+                        put("id", cursor.getLong(idIndex))
+                        put("tipo", cursor.getString(tipoIndex))
+                        put("descricao", cursor.getString(descricaoIndex))
+                        put("valorCentavos", cursor.getLong(valorIndex))
+                        put("diaMes", cursor.getInt(diaIndex))
+                        put("inicioMes", cursor.getString(inicioIndex))
+                        put("ativa", cursor.getInt(ativaIndex) == 1)
+                        put("categoria", cursor.getString(categoriaIndex))
+                    }
+                )
+            }
+        }
+
+        val movimentacoes = JSONArray()
+        readableDatabase.query(
+            TABELA_MOVIMENTACOES,
+            arrayOf(
+                COLUNA_ID,
+                COLUNA_TIPO,
+                COLUNA_DESCRICAO,
+                COLUNA_VALOR_CENTAVOS,
+                COLUNA_DATA,
+                COLUNA_RECORRENCIA_ID,
+                COLUNA_COMPETENCIA,
+                COLUNA_STATUS,
+                COLUNA_CATEGORIA
+            ),
+            null,
+            null,
+            null,
+            null,
+            "$COLUNA_ID ASC"
+        ).use { cursor ->
+            val idIndex = cursor.getColumnIndexOrThrow(COLUNA_ID)
+            val tipoIndex = cursor.getColumnIndexOrThrow(COLUNA_TIPO)
+            val descricaoIndex = cursor.getColumnIndexOrThrow(COLUNA_DESCRICAO)
+            val valorIndex = cursor.getColumnIndexOrThrow(COLUNA_VALOR_CENTAVOS)
+            val dataIndex = cursor.getColumnIndexOrThrow(COLUNA_DATA)
+            val recorrenciaIndex = cursor.getColumnIndexOrThrow(COLUNA_RECORRENCIA_ID)
+            val competenciaIndex = cursor.getColumnIndexOrThrow(COLUNA_COMPETENCIA)
+            val statusIndex = cursor.getColumnIndexOrThrow(COLUNA_STATUS)
+            val categoriaIndex = cursor.getColumnIndexOrThrow(COLUNA_CATEGORIA)
+
+            while (cursor.moveToNext()) {
+                movimentacoes.put(
+                    JSONObject().apply {
+                        put("id", cursor.getLong(idIndex))
+                        put("tipo", cursor.getString(tipoIndex))
+                        put("descricao", cursor.getString(descricaoIndex))
+                        put("valorCentavos", cursor.getLong(valorIndex))
+                        put("data", cursor.getString(dataIndex))
+                        put(
+                            "recorrenciaId",
+                            if (cursor.isNull(recorrenciaIndex)) {
+                                JSONObject.NULL
+                            } else {
+                                cursor.getLong(recorrenciaIndex)
+                            }
+                        )
+                        put(
+                            "competencia",
+                            if (cursor.isNull(competenciaIndex)) {
+                                JSONObject.NULL
+                            } else {
+                                cursor.getString(competenciaIndex)
+                            }
+                        )
+                        put("status", cursor.getString(statusIndex))
+                        put("categoria", cursor.getString(categoriaIndex))
+                    }
+                )
+            }
+        }
+
+        root.put("recorrencias", recorrencias)
+        root.put("movimentacoes", movimentacoes)
+        return root.toString(2)
+    }
+
+    fun restaurarBackupJson(conteudo: String): Boolean {
+        val root = JSONObject(conteudo)
+        val formato = root.getInt("formato")
+        require(formato == BACKUP_FORMAT_VERSION) {
+            "Formato de backup não suportado."
+        }
+
+        val recorrencias = root.getJSONArray("recorrencias")
+        val movimentacoes = root.getJSONArray("movimentacoes")
+        val carregarSaldo = root.optBoolean("carregarSaldo", true)
+
+        val db = writableDatabase
+        db.beginTransaction()
+
+        try {
+            db.delete(TABELA_MOVIMENTACOES, null, null)
+            db.delete(TABELA_RECORRENCIAS, null, null)
+
+            for (index in 0 until recorrencias.length()) {
+                val item = recorrencias.getJSONObject(index)
+                val values = ContentValues().apply {
+                    put(COLUNA_ID, item.getLong("id"))
+                    put(COLUNA_TIPO, item.getString("tipo"))
+                    put(COLUNA_DESCRICAO, item.getString("descricao"))
+                    put(COLUNA_VALOR_CENTAVOS, item.getLong("valorCentavos"))
+                    put(COLUNA_DIA_MES, item.getInt("diaMes"))
+                    put(COLUNA_INICIO_MES, item.getString("inicioMes"))
+                    put(COLUNA_ATIVA, if (item.getBoolean("ativa")) 1 else 0)
+                    put(COLUNA_CATEGORIA, item.optString("categoria", "Outros"))
+                }
+
+                db.insertOrThrow(TABELA_RECORRENCIAS, null, values)
+            }
+
+            for (index in 0 until movimentacoes.length()) {
+                val item = movimentacoes.getJSONObject(index)
+                val values = ContentValues().apply {
+                    put(COLUNA_ID, item.getLong("id"))
+                    put(COLUNA_TIPO, item.getString("tipo"))
+                    put(COLUNA_DESCRICAO, item.getString("descricao"))
+                    put(COLUNA_VALOR_CENTAVOS, item.getLong("valorCentavos"))
+                    put(COLUNA_DATA, item.getString("data"))
+
+                    if (item.isNull("recorrenciaId")) {
+                        putNull(COLUNA_RECORRENCIA_ID)
+                    } else {
+                        put(COLUNA_RECORRENCIA_ID, item.getLong("recorrenciaId"))
+                    }
+
+                    if (item.isNull("competencia")) {
+                        putNull(COLUNA_COMPETENCIA)
+                    } else {
+                        put(COLUNA_COMPETENCIA, item.getString("competencia"))
+                    }
+
+                    put(
+                        COLUNA_STATUS,
+                        item.optString(
+                            "status",
+                            StatusMovimentacao.REALIZADO.name
+                        )
+                    )
+                    put(COLUNA_CATEGORIA, item.optString("categoria", "Outros"))
+                }
+
+                db.insertOrThrow(TABELA_MOVIMENTACOES, null, values)
+            }
+
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+
+        return carregarSaldo
+    }
+
     fun saldoRealizadoAntesDoMes(mes: YearMonth): Long {
         val limite = mes.atDay(1).atStartOfDay().toString()
 
@@ -459,6 +654,7 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
     companion object {
         private const val DATABASE_NAME = "entrou_saiu.db"
         private const val DATABASE_VERSION = 4
+        private const val BACKUP_FORMAT_VERSION = 1
 
         private const val TABELA_MOVIMENTACOES = "movimentacoes"
         private const val TABELA_RECORRENCIAS = "recorrencias"

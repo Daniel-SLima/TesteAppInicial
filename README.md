@@ -28,7 +28,7 @@ O app separa saldo inicial, saldo realizado, saldo previsto, recebido, pago, a r
 
 ## Build
 
-O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.10.0.apk`.
+O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.12.0.apk`.
 
 ## Estado
 
@@ -74,3 +74,12 @@ Sem os Secrets, o workflow continua verde, mas gera um APK explicitamente marcad
 - Exportação do mês selecionado para CSV.
 - CSV compatível com Excel/Google Sheets usando separador por ponto e vírgula e valores monetários em formato brasileiro.
 - Exporta data, tipo, status, categoria, descrição, valor e indicação de lançamento fixo.
+
+
+## Versão 0.12.0
+
+- Backup completo em JSON pelo seletor de arquivos do Android.
+- Restauração de backup com confirmação antes de substituir os dados atuais.
+- O backup inclui movimentações, lançamentos fixos ativos/inativos e a preferência de carregar saldo entre meses.
+- A restauração é transacional: arquivo inválido ou incompatível não apaga o banco atual.
+- Tudo continua offline e sem servidor externo.
