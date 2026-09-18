@@ -16,14 +16,14 @@ Registrar rapidamente o que entrou e saiu do bolso, mantendo uma visão mensal s
 - [x] Listar movimentações
 - [x] Persistir dados localmente com SQLite nativo
 - [x] Editar e excluir movimentações
-- [ ] Visão por mês
+- [x] Visão por mês com navegação anterior/próximo
 - [ ] Gastos e ganhos recorrentes
 - [ ] Pago / pendente e recebido / a receber
 - [ ] Fechamento mensal automático
 
-## Uso
+## Visão mensal
 
-Toque em uma movimentação da lista para editar tipo, descrição e valor ou para excluí-la.
+O cabeçalho permite navegar entre os meses. O saldo, as entradas, os gastos e a lista de movimentações são recalculados para o mês selecionado.
 
 ## Persistência
 
@@ -44,4 +44,4 @@ A branch `main` representa a base estável. A branch `develop` recebe versões j
 
 ## Build
 
-O GitHub Actions gera um APK debug automaticamente. O build local continua disponível com Gradle.
+O GitHub Actions gera um APK nomeado automaticamente com a versão atual, por exemplo `FinTest-v0.5.0.apk`.

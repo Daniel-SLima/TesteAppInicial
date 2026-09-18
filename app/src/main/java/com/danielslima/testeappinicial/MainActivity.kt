@@ -17,7 +17,7 @@ import android.widget.TextView
 import android.widget.Toast
 import java.math.BigDecimal
 import java.text.NumberFormat
-import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -33,6 +33,7 @@ class MainActivity : Activity() {
     private lateinit var incomeButton: Button
     private lateinit var descriptionInput: EditText
     private lateinit var valueInput: EditText
+    private lateinit var monthText: TextView
     private lateinit var balanceText: TextView
     private lateinit var incomeTotalText: TextView
     private lateinit var expenseTotalText: TextView
@@ -41,6 +42,7 @@ class MainActivity : Activity() {
     private lateinit var historySection: LinearLayout
 
     private var tipoSelecionado = TipoMovimentacao.GASTO
+    private var mesSelecionado = YearMonth.now()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +55,7 @@ class MainActivity : Activity() {
         incomeButton = findViewById(R.id.incomeButton)
         descriptionInput = findViewById(R.id.descriptionInput)
         valueInput = findViewById(R.id.valueInput)
+        monthText = findViewById(R.id.monthText)
         balanceText = findViewById(R.id.balanceText)
         incomeTotalText = findViewById(R.id.incomeTotalText)
         expenseTotalText = findViewById(R.id.expenseTotalText)
@@ -60,7 +63,15 @@ class MainActivity : Activity() {
         movementsContainer = findViewById(R.id.movementsContainer)
         historySection = findViewById(R.id.historySection)
 
-        findViewById<TextView>(R.id.monthText).text = formatarMesAtual()
+        findViewById<Button>(R.id.previousMonthButton).setOnClickListener {
+            mesSelecionado = mesSelecionado.minusMonths(1)
+            recarregarInterface()
+        }
+
+        findViewById<Button>(R.id.nextMonthButton).setOnClickListener {
+            mesSelecionado = mesSelecionado.plusMonths(1)
+            recarregarInterface()
+        }
 
         expenseButton.setOnClickListener {
             selecionarTipo(TipoMovimentacao.GASTO)
@@ -75,9 +86,7 @@ class MainActivity : Activity() {
         }
 
         selecionarTipo(TipoMovimentacao.GASTO)
-        carregarMovimentacoes()
-        atualizarResumo()
-        renderizarMovimentacoes()
+        recarregarInterface()
     }
 
     override fun onDestroy() {
@@ -88,7 +97,7 @@ class MainActivity : Activity() {
     private fun carregarMovimentacoes() {
         try {
             movimentacoes.clear()
-            movimentacoes.addAll(database.listarTodas())
+            movimentacoes.addAll(database.listarPorMes(mesSelecionado))
         } catch (erro: SQLiteException) {
             Toast.makeText(
                 this,
@@ -152,14 +161,13 @@ class MainActivity : Activity() {
             return
         }
 
-        movimentacoes.add(0, novaMovimentacao)
+        mesSelecionado = YearMonth.from(novaMovimentacao.data)
 
         descriptionInput.text.clear()
         valueInput.text.clear()
         descriptionInput.requestFocus()
 
-        atualizarResumo()
-        renderizarMovimentacoes()
+        recarregarInterface()
 
         Toast.makeText(this, "Movimentação salva no aparelho", Toast.LENGTH_SHORT).show()
 
@@ -280,6 +288,7 @@ class MainActivity : Activity() {
     }
 
     private fun recarregarInterface() {
+        monthText.text = formatarMes(mesSelecionado)
         carregarMovimentacoes()
         atualizarResumo()
         renderizarMovimentacoes()
@@ -394,9 +403,9 @@ class MainActivity : Activity() {
             .replace('.', ',')
     }
 
-    private fun formatarMesAtual(): String {
+    private fun formatarMes(mes: YearMonth): String {
         val formato = DateTimeFormatter.ofPattern("MMMM 'de' yyyy", localeBrasil)
-        return LocalDate.now()
+        return mes.atDay(1)
             .format(formato)
             .replaceFirstChar { it.uppercase(localeBrasil) }
     }

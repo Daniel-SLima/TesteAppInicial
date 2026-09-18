@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">FinTest</string>
+    <string name="previous_month">Mês anterior</string>
+    <string name="next_month">Próximo mês</string>
     <string name="movement_question">Gastou ou ganhou?</string>
     <string name="quick_register_hint">Registre uma movimentação em poucos segundos.</string>
     <string name="spent">Gastou</string>
@@ -9,10 +11,10 @@
     <string name="value_label">Valor</string>
     <string name="value_hint">R$ 0,00</string>
     <string name="register">Registrar</string>
-    <string name="month_summary">Seu mês</string>
-    <string name="current_balance">Saldo atual</string>
+    <string name="month_summary">Resumo do mês</string>
+    <string name="month_balance">Saldo do mês</string>
     <string name="income_total">Entradas</string>
     <string name="expense_total">Gastos</string>
     <string name="movements">Movimentações</string>
-    <string name="empty_state">Nenhuma movimentação registrada ainda.</string>
+    <string name="empty_state_month">Nenhuma movimentação neste mês.</string>
 </resources>

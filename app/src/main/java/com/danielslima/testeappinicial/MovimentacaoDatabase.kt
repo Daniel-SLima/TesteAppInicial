@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import java.time.LocalDateTime
+import java.time.YearMonth
 
 class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
     context,
@@ -87,7 +88,20 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         ) > 0
     }
 
-    fun listarTodas(): List<Movimentacao> {
+    fun listarPorMes(mes: YearMonth): List<Movimentacao> {
+        val inicio = mes.atDay(1).atStartOfDay()
+        val fimExclusivo = mes.plusMonths(1).atDay(1).atStartOfDay()
+
+        return consultar(
+            selection = "$COLUNA_DATA >= ? AND $COLUNA_DATA < ?",
+            selectionArgs = arrayOf(inicio.toString(), fimExclusivo.toString())
+        )
+    }
+
+    private fun consultar(
+        selection: String?,
+        selectionArgs: Array<String>?
+    ): List<Movimentacao> {
         val resultado = mutableListOf<Movimentacao>()
 
         readableDatabase.query(
@@ -99,8 +113,8 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
                 COLUNA_VALOR_CENTAVOS,
                 COLUNA_DATA
             ),
-            null,
-            null,
+            selection,
+            selectionArgs,
             null,
             null,
             "$COLUNA_DATA DESC, $COLUNA_ID DESC"
