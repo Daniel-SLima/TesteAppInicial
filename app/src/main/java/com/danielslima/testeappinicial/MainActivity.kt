@@ -9,6 +9,7 @@ import android.content.res.ColorStateList
 import android.database.sqlite.SQLiteException
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -25,6 +26,7 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import java.math.BigDecimal
+import java.nio.charset.Charset
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.YearMonth
@@ -80,6 +82,7 @@ class MainActivity : Activity() {
     private var autenticadoNestaSessao = false
     private var autenticacaoEmAndamento = false
     private var alterandoProtecao = false
+    private var momentoSegundoPlanoMs: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -189,6 +192,7 @@ class MainActivity : Activity() {
                     .apply()
 
                 autenticadoNestaSessao = false
+                momentoSegundoPlanoMs = null
                 solicitarAutenticacao()
             } else {
                 preferencias.edit()
@@ -196,6 +200,7 @@ class MainActivity : Activity() {
                     .apply()
 
                 autenticadoNestaSessao = true
+                momentoSegundoPlanoMs = null
             }
         }
 
@@ -262,6 +267,22 @@ class MainActivity : Activity() {
         if (
             ::securityCheckBox.isInitialized &&
             securityCheckBox.isChecked &&
+            autenticadoNestaSessao &&
+            momentoSegundoPlanoMs != null
+        ) {
+            val tempoForaMs =
+                SystemClock.elapsedRealtime() - momentoSegundoPlanoMs!!
+
+            if (tempoForaMs >= TEMPO_REAUTENTICACAO_MS) {
+                autenticadoNestaSessao = false
+            }
+
+            momentoSegundoPlanoMs = null
+        }
+
+        if (
+            ::securityCheckBox.isInitialized &&
+            securityCheckBox.isChecked &&
             !autenticadoNestaSessao &&
             !autenticacaoEmAndamento
         ) {
@@ -273,9 +294,10 @@ class MainActivity : Activity() {
         if (
             ::securityCheckBox.isInitialized &&
             securityCheckBox.isChecked &&
+            autenticadoNestaSessao &&
             !autenticacaoEmAndamento
         ) {
-            autenticadoNestaSessao = false
+            momentoSegundoPlanoMs = SystemClock.elapsedRealtime()
         }
 
         super.onStop()
@@ -299,6 +321,7 @@ class MainActivity : Activity() {
 
             if (resultCode == RESULT_OK) {
                 autenticadoNestaSessao = true
+                momentoSegundoPlanoMs = null
             } else {
                 finish()
             }
@@ -1500,10 +1523,9 @@ class MainActivity : Activity() {
             val output = contentResolver.openOutputStream(uri)
                 ?: throw IllegalStateException("Não foi possível abrir o arquivo.")
 
-            output.bufferedWriter(Charsets.UTF_8).use { writer ->
-                writer.write("\uFEFF")
+            output.bufferedWriter(CSV_CHARSET).use { writer ->
                 writer.write(
-                    "Data;Tipo;Status;Categoria;Descrição;Valor;Fixo;Parcela\n"
+                    "Data;Tipo;Status;Categoria;Descrição;Valor;Fixo;Parcela\r\n"
                 )
 
                 movimentacoes
@@ -1561,7 +1583,7 @@ class MainActivity : Activity() {
                         ).joinToString(";") { csvCampo(it) }
 
                         writer.write(linha)
-                        writer.write("\n")
+                        writer.write("\r\n")
                     }
             }
 
@@ -1582,11 +1604,24 @@ class MainActivity : Activity() {
     }
 
     private fun csvCampo(valor: String): String {
-        val escapado = valor.replace("\"", "\"\"")
+        val protegido = if (
+            valor.startsWith("=") ||
+            valor.startsWith("+") ||
+            valor.startsWith("-") ||
+            valor.startsWith("@")
+        ) {
+            "'$valor"
+        } else {
+            valor
+        }
+
+        val escapado = protegido.replace("\"", "\"\"")
+
         return if (
             escapado.contains(';') ||
             escapado.contains('"') ||
-            escapado.contains('\n')
+            escapado.contains('\n') ||
+            escapado.contains('\r')
         ) {
             "\"$escapado\""
         } else {
@@ -1770,6 +1805,8 @@ class MainActivity : Activity() {
         private const val REQUEST_EXPORT_BACKUP = 1202
         private const val REQUEST_IMPORT_BACKUP = 1203
         private const val REQUEST_AUTH_APP = 1204
+        private const val TEMPO_REAUTENTICACAO_MS = 5 * 60 * 1000L
+        private val CSV_CHARSET: Charset = Charset.forName("windows-1252")
 
         private val CATEGORIAS = listOf(
             "Alimentação",

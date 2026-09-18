@@ -28,7 +28,7 @@ O app separa saldo inicial, saldo realizado, saldo previsto, recebido, pago, a r
 
 ## Build
 
-O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.15.0.apk`.
+O GitHub Actions gera o APK com a versão no nome, por exemplo `FinTest-v0.15.1.apk`.
 
 ## Estado
 
@@ -113,3 +113,14 @@ Sem os Secrets, o workflow continua verde, mas gera um APK explicitamente marcad
 - Categorias com orçamento aparecem mesmo sem gastos no mês.
 - Orçamentos podem ser alterados ou removidos a qualquer momento.
 - Backup v3 inclui os orçamentos e continua aceitando backups v1/v2.
+
+
+## Versão 0.15.1
+
+- Proteção do app pede autenticação na primeira abertura da sessão.
+- Ao voltar para o FinTest em menos de 5 minutos, não pede PIN/padrão/senha novamente.
+- Após 5 minutos ou mais fora do app, a autenticação do Android é solicitada novamente.
+- CSV ajustado para compatibilidade com planilhas móveis em português usando Windows-1252 e finais de linha CRLF.
+- Removido o BOM UTF-8 que aparecia como `ï»¿` em alguns leitores.
+- Campos CSV continuam escapando ponto e vírgula, aspas e quebras de linha.
+- Textos que começam com `=`, `+`, `-` ou `@` são protegidos contra interpretação acidental como fórmula.
