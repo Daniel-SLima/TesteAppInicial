@@ -2,6 +2,7 @@ package com.danielslima.testeappinicial
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.SharedPreferences
 import android.content.res.ColorStateList
 import android.database.sqlite.SQLiteException
 import android.os.Bundle
@@ -31,6 +32,7 @@ class MainActivity : Activity() {
     private val movimentacoes = mutableListOf<Movimentacao>()
 
     private lateinit var database: MovimentacaoDatabase
+    private lateinit var preferencias: SharedPreferences
     private lateinit var mainScroll: ScrollView
     private lateinit var expenseButton: Button
     private lateinit var incomeButton: Button
@@ -39,7 +41,10 @@ class MainActivity : Activity() {
     private lateinit var recurringCheckBox: CheckBox
     private lateinit var recurringOptions: LinearLayout
     private lateinit var recurringDayInput: EditText
+    private lateinit var carryBalanceCheckBox: CheckBox
     private lateinit var monthText: TextView
+    private lateinit var monthStateText: TextView
+    private lateinit var initialBalanceText: TextView
     private lateinit var balanceText: TextView
     private lateinit var forecastBalanceText: TextView
     private lateinit var incomeTotalText: TextView
@@ -52,12 +57,14 @@ class MainActivity : Activity() {
 
     private var tipoSelecionado = TipoMovimentacao.GASTO
     private var mesSelecionado = YearMonth.now()
+    private var mesAtualReferencia = YearMonth.now()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         database = MovimentacaoDatabase(applicationContext)
+        preferencias = getSharedPreferences(PREFERENCIAS, MODE_PRIVATE)
 
         mainScroll = findViewById(R.id.mainScroll)
         expenseButton = findViewById(R.id.expenseButton)
@@ -67,7 +74,10 @@ class MainActivity : Activity() {
         recurringCheckBox = findViewById(R.id.recurringCheckBox)
         recurringOptions = findViewById(R.id.recurringOptions)
         recurringDayInput = findViewById(R.id.recurringDayInput)
+        carryBalanceCheckBox = findViewById(R.id.carryBalanceCheckBox)
         monthText = findViewById(R.id.monthText)
+        monthStateText = findViewById(R.id.monthStateText)
+        initialBalanceText = findViewById(R.id.initialBalanceText)
         balanceText = findViewById(R.id.balanceText)
         forecastBalanceText = findViewById(R.id.forecastBalanceText)
         incomeTotalText = findViewById(R.id.incomeTotalText)
@@ -82,6 +92,17 @@ class MainActivity : Activity() {
 
         recurringCheckBox.setOnCheckedChangeListener { _, checked ->
             recurringOptions.visibility = if (checked) View.VISIBLE else View.GONE
+        }
+
+        carryBalanceCheckBox.isChecked = preferencias.getBoolean(
+            CHAVE_CARREGAR_SALDO,
+            true
+        )
+        carryBalanceCheckBox.setOnCheckedChangeListener { _, checked ->
+            preferencias.edit()
+                .putBoolean(CHAVE_CARREGAR_SALDO, checked)
+                .apply()
+            atualizarResumo()
         }
 
         findViewById<Button>(R.id.manageRecurringButton).setOnClickListener {
@@ -112,6 +133,21 @@ class MainActivity : Activity() {
 
         selecionarTipo(TipoMovimentacao.GASTO)
         recarregarInterface()
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        val mesAgora = YearMonth.now()
+        if (mesAgora != mesAtualReferencia) {
+            val acompanhavaMesAtual = mesSelecionado == mesAtualReferencia
+            mesAtualReferencia = mesAgora
+
+            if (acompanhavaMesAtual && ::database.isInitialized) {
+                mesSelecionado = mesAgora
+                recarregarInterface()
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -535,12 +571,29 @@ class MainActivity : Activity() {
 
     private fun recarregarInterface() {
         monthText.text = formatarMes(mesSelecionado)
+        monthStateText.text = estadoDoMes(mesSelecionado)
         carregarMovimentacoes()
         atualizarResumo()
         renderizarMovimentacoes()
     }
 
     private fun atualizarResumo() {
+        val carregarSaldo = if (::carryBalanceCheckBox.isInitialized) {
+            carryBalanceCheckBox.isChecked
+        } else {
+            true
+        }
+
+        val saldoInicial = if (carregarSaldo) {
+            try {
+                database.saldoRealizadoAntesDoMes(mesSelecionado)
+            } catch (erro: SQLiteException) {
+                0L
+            }
+        } else {
+            0L
+        }
+
         val realizados = movimentacoes.filter { it.status == StatusMovimentacao.REALIZADO }
         val pendentes = movimentacoes.filter { it.status == StatusMovimentacao.PENDENTE }
 
@@ -560,9 +613,10 @@ class MainActivity : Activity() {
             .filter { it.tipo == TipoMovimentacao.GASTO }
             .sumOf { it.valorCentavos }
 
-        val saldoRealizado = ganhosRealizados - gastosRealizados
+        val saldoRealizado = saldoInicial + ganhosRealizados - gastosRealizados
         val saldoPrevisto = saldoRealizado + ganhosPendentes - gastosPendentes
 
+        initialBalanceText.text = formatarMoeda(saldoInicial)
         balanceText.text = formatarMoeda(saldoRealizado)
         forecastBalanceText.text = formatarMoeda(saldoPrevisto)
         incomeTotalText.text = formatarMoeda(ganhosRealizados)
@@ -649,6 +703,16 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun estadoDoMes(mes: YearMonth): String {
+        val atual = YearMonth.now()
+
+        return when {
+            mes.isBefore(atual) -> "Mês encerrado automaticamente"
+            mes.isAfter(atual) -> "Mês futuro"
+            else -> "Mês atual"
+        }
+    }
+
     private fun parseValorCentavos(valorDigitado: String): Long? {
         val limpo = valorDigitado
             .replace("R$", "", ignoreCase = true)
@@ -689,5 +753,10 @@ class MainActivity : Activity() {
         return mes.atDay(1)
             .format(formato)
             .replaceFirstChar { it.uppercase(localeBrasil) }
+    }
+
+    companion object {
+        private const val PREFERENCIAS = "fintest_preferences"
+        private const val CHAVE_CARREGAR_SALDO = "carregar_saldo_entre_meses"
     }
 }

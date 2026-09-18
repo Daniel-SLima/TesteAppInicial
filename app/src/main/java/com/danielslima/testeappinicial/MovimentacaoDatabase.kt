@@ -280,6 +280,29 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         )
     }
 
+    fun saldoRealizadoAntesDoMes(mes: YearMonth): Long {
+        val limite = mes.atDay(1).atStartOfDay().toString()
+
+        val sql = """
+            SELECT COALESCE(
+                SUM(
+                    CASE
+                        WHEN $COLUNA_TIPO = 'GANHO' THEN $COLUNA_VALOR_CENTAVOS
+                        ELSE -$COLUNA_VALOR_CENTAVOS
+                    END
+                ),
+                0
+            )
+            FROM $TABELA_MOVIMENTACOES
+            WHERE $COLUNA_DATA < ?
+              AND $COLUNA_STATUS = 'REALIZADO'
+        """.trimIndent()
+
+        readableDatabase.rawQuery(sql, arrayOf(limite)).use { cursor ->
+            return if (cursor.moveToFirst()) cursor.getLong(0) else 0L
+        }
+    }
+
     private fun consultar(
         selection: String?,
         selectionArgs: Array<String>?

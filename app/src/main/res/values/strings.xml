@@ -16,12 +16,14 @@
     <string name="register">Registrar</string>
     <string name="manage_recurring">Gerenciar fixos mensais</string>
     <string name="month_summary">Resumo do mês</string>
+    <string name="initial_balance">Saldo inicial</string>
     <string name="realized_balance">Saldo realizado</string>
     <string name="forecast_balance">Saldo previsto após pendências</string>
     <string name="received_total">Recebido</string>
     <string name="paid_total">Pago</string>
     <string name="to_receive_total">A receber</string>
     <string name="to_pay_total">A pagar</string>
+    <string name="carry_balance">Levar saldo realizado para o próximo mês</string>
     <string name="movements">Movimentações</string>
     <string name="empty_state_month">Nenhuma movimentação neste mês.</string>
 </resources>
