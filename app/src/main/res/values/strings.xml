@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Teste App Inicial</string>
+    <string name="initial_status">Preparando aplicativo…</string>
+</resources>
