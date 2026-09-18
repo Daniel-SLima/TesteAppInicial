@@ -139,7 +139,7 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs "${{ steps.apk.outputs.path }}" | tee "$RUNNER_TEMP/signature.txt"
 
           EXPECTED="846d6833750f2f511f7936c7a381de1f5ab28c53400213ac8d6144ae8fdf1757"
-          ACTUAL="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/signature.txt" | tr '[:upper:]' '[:lower:]' | tr -d ':')"
+          ACTUAL="$(awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' "$RUNNER_TEMP/signature.txt" | tr '[:upper:]' '[:lower:]' | tr -d ':')"
 
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "Assinatura inesperada: $ACTUAL"
