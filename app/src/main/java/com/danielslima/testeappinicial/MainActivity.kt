@@ -74,6 +74,18 @@ class MainActivity : Activity() {
     private lateinit var emptyStateText: TextView
     private lateinit var movementsContainer: LinearLayout
     private lateinit var historySection: LinearLayout
+    private lateinit var homeScreen: ScrollView
+    private lateinit var planningScreen: ScrollView
+    private lateinit var settingsScreen: ScrollView
+    private lateinit var navHome: LinearLayout
+    private lateinit var navMovements: LinearLayout
+    private lateinit var navPlanning: LinearLayout
+    private lateinit var navSettings: LinearLayout
+    private lateinit var homeUpcomingContainer: LinearLayout
+    private lateinit var homeBudgetProgressBar: ProgressBar
+    private lateinit var homeBudgetProgressText: TextView
+    private lateinit var movementsMonthText: TextView
+    private lateinit var planningMonthText: TextView
 
     private var tipoSelecionado = TipoMovimentacao.GASTO
     private var mesSelecionado = YearMonth.now()
@@ -124,6 +136,18 @@ class MainActivity : Activity() {
         emptyStateText = findViewById(R.id.emptyStateText)
         movementsContainer = findViewById(R.id.movementsContainer)
         historySection = findViewById(R.id.historySection)
+        homeScreen = findViewById(R.id.homeScreen)
+        planningScreen = findViewById(R.id.planningScreen)
+        settingsScreen = findViewById(R.id.settingsScreen)
+        navHome = findViewById(R.id.navHome)
+        navMovements = findViewById(R.id.navMovements)
+        navPlanning = findViewById(R.id.navPlanning)
+        navSettings = findViewById(R.id.navSettings)
+        homeUpcomingContainer = findViewById(R.id.homeUpcomingContainer)
+        homeBudgetProgressBar = findViewById(R.id.homeBudgetProgressBar)
+        homeBudgetProgressText = findViewById(R.id.homeBudgetProgressText)
+        movementsMonthText = findViewById(R.id.movementsMonthText)
+        planningMonthText = findViewById(R.id.planningMonthText)
 
         categorySpinner.adapter = ArrayAdapter(
             this,
@@ -246,7 +270,50 @@ class MainActivity : Activity() {
             registrarMovimentacao()
         }
 
+        navHome.setOnClickListener {
+            selecionarSecao(ViraSection.HOME)
+        }
+        navMovements.setOnClickListener {
+            selecionarSecao(ViraSection.MOVEMENTS)
+        }
+        navPlanning.setOnClickListener {
+            selecionarSecao(ViraSection.PLANNING)
+        }
+        navSettings.setOnClickListener {
+            selecionarSecao(ViraSection.SETTINGS)
+        }
+
+        findViewById<Button>(R.id.homeExpenseQuickButton).setOnClickListener {
+            selecionarTipo(TipoMovimentacao.GASTO)
+            selecionarSecao(ViraSection.MOVEMENTS)
+            mainScroll.post {
+                mainScroll.smoothScrollTo(0, 0)
+                descriptionInput.requestFocus()
+            }
+        }
+
+        findViewById<Button>(R.id.homeIncomeQuickButton).setOnClickListener {
+            selecionarTipo(TipoMovimentacao.GANHO)
+            selecionarSecao(ViraSection.MOVEMENTS)
+            mainScroll.post {
+                mainScroll.smoothScrollTo(0, 0)
+                descriptionInput.requestFocus()
+            }
+        }
+
+        findViewById<TextView>(R.id.homeSeeAllMovements).setOnClickListener {
+            selecionarSecao(ViraSection.MOVEMENTS)
+            mainScroll.post {
+                mainScroll.smoothScrollTo(0, historySection.top)
+            }
+        }
+
+        findViewById<LinearLayout>(R.id.homeBudgetSection).setOnClickListener {
+            selecionarSecao(ViraSection.PLANNING)
+        }
+
         selecionarTipo(TipoMovimentacao.GASTO)
+        selecionarSecao(ViraSection.initial())
         recarregarInterface()
     }
 
@@ -352,6 +419,22 @@ class MainActivity : Activity() {
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+
+    private fun selecionarSecao(secao: ViraSection) {
+        homeScreen.visibility =
+            if (secao == ViraSection.HOME) View.VISIBLE else View.GONE
+        mainScroll.visibility =
+            if (secao == ViraSection.MOVEMENTS) View.VISIBLE else View.GONE
+        planningScreen.visibility =
+            if (secao == ViraSection.PLANNING) View.VISIBLE else View.GONE
+        settingsScreen.visibility =
+            if (secao == ViraSection.SETTINGS) View.VISIBLE else View.GONE
+
+        navHome.isSelected = secao == ViraSection.HOME
+        navMovements.isSelected = secao == ViraSection.MOVEMENTS
+        navPlanning.isSelected = secao == ViraSection.PLANNING
+        navSettings.isSelected = secao == ViraSection.SETTINGS
     }
 
     private fun configurarFiltros() {
@@ -997,12 +1080,18 @@ class MainActivity : Activity() {
     }
 
     private fun recarregarInterface() {
-        monthText.text = formatarMes(mesSelecionado)
+        val mesFormatado = formatarMes(mesSelecionado)
+        monthText.text = mesFormatado
+        movementsMonthText.text = mesFormatado
+        planningMonthText.text = mesFormatado
         monthStateText.text = estadoDoMes(mesSelecionado)
+
         carregarMovimentacoes()
         atualizarResumo()
         atualizarResumoCategorias()
         renderizarMovimentacoes()
+        renderizarProximosVencimentos()
+        atualizarResumoOrcamentoHome()
     }
 
     private fun atualizarResumo() {
@@ -1071,6 +1160,143 @@ class MainActivity : Activity() {
                 }
             )
         )
+    }
+
+    private fun renderizarProximosVencimentos() {
+        homeUpcomingContainer.removeAllViews()
+
+        val proximos = movimentacoes
+            .filter {
+                it.tipo == TipoMovimentacao.GASTO &&
+                    it.status == StatusMovimentacao.PENDENTE
+            }
+            .sortedBy { it.data }
+            .take(3)
+
+        if (proximos.isEmpty()) {
+            homeUpcomingContainer.addView(
+                TextView(this).apply {
+                    text = "Nenhum pagamento pendente neste mês."
+                    textSize = 13f
+                    setTextColor(getColor(R.color.text_secondary))
+                    setPadding(0, dp(14), 0, dp(14))
+                }
+            )
+            return
+        }
+
+        val dateFormatter = DateTimeFormatter.ofPattern("dd/MM", localeBrasil)
+
+        proximos.forEachIndexed { index, movimentacao ->
+            val linha = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, dp(12), 0, dp(12))
+            }
+
+            val textos = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+
+            textos.addView(
+                TextView(this).apply {
+                    text = movimentacao.descricao
+                    textSize = 13f
+                    setTextColor(getColor(R.color.text_primary))
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                }
+            )
+
+            val contexto = when {
+                movimentacao.parcelaNumero != null &&
+                    movimentacao.parcelasTotal != null ->
+                    "Parcela ${movimentacao.parcelaNumero}/${movimentacao.parcelasTotal}"
+                movimentacao.recorrenciaId != null -> "Fixo mensal"
+                else -> movimentacao.categoria
+            }
+
+            textos.addView(
+                TextView(this).apply {
+                    text = "$contexto • ${movimentacao.data.format(dateFormatter)}"
+                    textSize = 11f
+                    setTextColor(getColor(R.color.text_secondary))
+                }
+            )
+
+            linha.addView(
+                textos,
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            )
+
+            linha.addView(
+                TextView(this).apply {
+                    text = formatarMoeda(movimentacao.valorCentavos)
+                    textSize = 13f
+                    setTextColor(getColor(R.color.expense))
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                }
+            )
+
+            homeUpcomingContainer.addView(linha)
+
+            if (index < proximos.lastIndex) {
+                homeUpcomingContainer.addView(
+                    View(this).apply {
+                        setBackgroundColor(getColor(R.color.border))
+                    },
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(1)
+                    )
+                )
+            }
+        }
+    }
+
+    private fun atualizarResumoOrcamentoHome() {
+        val orcamentos = try {
+            database.listarOrcamentos()
+        } catch (erro: SQLiteException) {
+            emptyMap()
+        }
+
+        if (orcamentos.isEmpty()) {
+            homeBudgetProgressBar.progress = 0
+            homeBudgetProgressText.text = "Sem limite definido"
+            return
+        }
+
+        val limiteTotal = orcamentos.values.sum().coerceAtLeast(1L)
+        val gastoPrevisto = movimentacoes
+            .filter {
+                it.tipo == TipoMovimentacao.GASTO &&
+                    orcamentos.containsKey(it.categoria)
+            }
+            .sumOf { it.valorCentavos }
+
+        val progresso = ((gastoPrevisto * 1000L) / limiteTotal)
+            .toInt()
+            .coerceIn(0, 1000)
+
+        val percentual = ((gastoPrevisto * 100L) / limiteTotal)
+            .toInt()
+            .coerceAtLeast(0)
+
+        homeBudgetProgressBar.progress = progresso
+        homeBudgetProgressBar.progressTintList = ColorStateList.valueOf(
+            getColor(
+                if (gastoPrevisto > limiteTotal) {
+                    R.color.expense
+                } else {
+                    R.color.brand_secondary
+                }
+            )
+        )
+        homeBudgetProgressText.text = "$percentual% utilizado"
     }
 
     private fun atualizarResumoCategorias() {
@@ -1384,7 +1610,7 @@ class MainActivity : Activity() {
         }
 
         val intent = keyguard.createConfirmDeviceCredentialIntent(
-            "Desbloquear FinTest",
+            "Desbloquear Vira",
             "Confirme o bloqueio do aparelho para acessar suas finanças."
         )
 
@@ -1407,7 +1633,7 @@ class MainActivity : Activity() {
             type = "application/json"
             putExtra(
                 Intent.EXTRA_TITLE,
-                "FinTest-backup-${LocalDate.now()}.json"
+                "Vira-backup-${LocalDate.now()}.json"
             )
         }
 
@@ -1426,7 +1652,7 @@ class MainActivity : Activity() {
 
             Toast.makeText(
                 this,
-                "Backup do FinTest criado com sucesso",
+                "Backup do Vira criado com sucesso",
                 Toast.LENGTH_LONG
             ).show()
         } catch (erro: Exception) {
@@ -1465,7 +1691,7 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle("Restaurar backup?")
             .setMessage(
-                "Os dados atuais do FinTest serão substituídos pelos dados do backup. " +
+                "Os dados atuais do Vira serão substituídos pelos dados do backup. " +
                     "Se o arquivo for inválido, nada será alterado."
             )
             .setPositiveButton("Restaurar") { _, _ ->
@@ -1509,7 +1735,7 @@ class MainActivity : Activity() {
             type = "text/csv"
             putExtra(
                 Intent.EXTRA_TITLE,
-                "FinTest-${mesSelecionado}.csv"
+                "Vira-${mesSelecionado}.csv"
             )
         }
 
