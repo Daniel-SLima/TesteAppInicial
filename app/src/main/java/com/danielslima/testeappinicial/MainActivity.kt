@@ -673,18 +673,38 @@ class MainActivity : Activity() {
         expenseButton.text = if (gastoSelecionado) "✓ GASTOU" else "GASTOU"
         incomeButton.text = if (!gastoSelecionado) "✓ GANHOU" else "GANHOU"
 
-        expenseButton.backgroundTintList = ColorStateList.valueOf(
-            getColor(if (gastoSelecionado) R.color.expense else R.color.unselected)
+        expenseButton.setBackgroundResource(
+            if (gastoSelecionado) {
+                R.drawable.vira_button_expense
+            } else {
+                R.drawable.vira_button_secondary
+            }
         )
-        incomeButton.backgroundTintList = ColorStateList.valueOf(
-            getColor(if (!gastoSelecionado) R.color.income else R.color.unselected)
+        incomeButton.setBackgroundResource(
+            if (!gastoSelecionado) {
+                R.drawable.vira_button_income
+            } else {
+                R.drawable.vira_button_secondary
+            }
         )
 
         expenseButton.setTextColor(
-            getColor(if (gastoSelecionado) R.color.white else R.color.text_primary)
+            getColor(
+                if (gastoSelecionado) {
+                    R.color.white
+                } else {
+                    R.color.text_primary
+                }
+            )
         )
         incomeButton.setTextColor(
-            getColor(if (!gastoSelecionado) R.color.white else R.color.text_primary)
+            getColor(
+                if (!gastoSelecionado) {
+                    R.color.white
+                } else {
+                    R.color.text_primary
+                }
+            )
         )
 
         installmentCheckBox.visibility =
