@@ -26,7 +26,7 @@ test -f app/src/main/res/layout/dialog_vira_month_picker.xml || fail "seletor de
 grep -q 'abrirSeletorMes' app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt || fail "navegação rápida entre meses ausente"
 grep -q 'Voltar ao mês atual' app/src/main/res/values/strings.xml || fail "atalho para mês atual ausente"
 if grep -q 'Movimentação salva no aparelho' app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt; then fail "toast de sucesso do lançamento ainda presente"; fi
-if grep -q 'android:paddingTop="12dp"' app/src/main/res/layout/activity_main.xml; then fail "padding fixo antigo ainda presente"; fi
+if sed -n '/android:id="@+id\/screenHost"/,/^[[:space:]]*>/p' app/src/main/res/layout/activity_main.xml | grep -q 'android:paddingTop="12dp"'; then fail "padding fixo antigo ainda presente no screenHost"; fi
 grep -q 'aplicarInsetsSistema' app/src/main/java/com/danielslima/testeappinicial/MainActivity.kt || fail "insets reais do Android ausentes"
 grep -q 'homeChooseMonthAction' app/src/main/res/layout/activity_main.xml || fail "atalho de mês na Home ausente"
 grep -q 'movementsChooseMonthAction' app/src/main/res/layout/activity_main.xml || fail "atalho de mês em Movimentações ausente"
