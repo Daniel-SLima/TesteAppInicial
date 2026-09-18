@@ -87,6 +87,16 @@ class MainActivity : Activity() {
     private lateinit var homeBudgetProgressText: TextView
     private lateinit var movementsMonthText: TextView
     private lateinit var planningMonthText: TextView
+    private lateinit var planningMonthNetText: TextView
+    private lateinit var planningIncomeExpectedText: TextView
+    private lateinit var planningExpenseExpectedText: TextView
+    private lateinit var planningMonthsContainer: LinearLayout
+    private lateinit var planningCommitmentsContainer: LinearLayout
+    private lateinit var planningCommitmentsEmpty: TextView
+    private lateinit var planningRecurringCountText: TextView
+    private lateinit var planningRecurringValueText: TextView
+    private lateinit var planningInstallmentCountText: TextView
+    private lateinit var planningInstallmentValueText: TextView
 
     private var tipoSelecionado = TipoMovimentacao.GASTO
     private var mesSelecionado = YearMonth.now()
@@ -144,6 +154,16 @@ class MainActivity : Activity() {
         homeBudgetProgressText = findViewById(R.id.homeBudgetProgressText)
         movementsMonthText = findViewById(R.id.movementsMonthText)
         planningMonthText = findViewById(R.id.planningMonthText)
+        planningMonthNetText = findViewById(R.id.planningMonthNetText)
+        planningIncomeExpectedText = findViewById(R.id.planningIncomeExpectedText)
+        planningExpenseExpectedText = findViewById(R.id.planningExpenseExpectedText)
+        planningMonthsContainer = findViewById(R.id.planningMonthsContainer)
+        planningCommitmentsContainer = findViewById(R.id.planningCommitmentsContainer)
+        planningCommitmentsEmpty = findViewById(R.id.planningCommitmentsEmpty)
+        planningRecurringCountText = findViewById(R.id.planningRecurringCountText)
+        planningRecurringValueText = findViewById(R.id.planningRecurringValueText)
+        planningInstallmentCountText = findViewById(R.id.planningInstallmentCountText)
+        planningInstallmentValueText = findViewById(R.id.planningInstallmentValueText)
 
         configurarFiltros()
 
@@ -226,6 +246,16 @@ class MainActivity : Activity() {
         }
 
         findViewById<Button>(R.id.nextMonthButton).setOnClickListener {
+            mesSelecionado = mesSelecionado.plusMonths(1)
+            recarregarInterface()
+        }
+
+        findViewById<TextView>(R.id.planningPreviousMonthButton).setOnClickListener {
+            mesSelecionado = mesSelecionado.minusMonths(1)
+            recarregarInterface()
+        }
+
+        findViewById<TextView>(R.id.planningNextMonthButton).setOnClickListener {
             mesSelecionado = mesSelecionado.plusMonths(1)
             recarregarInterface()
         }
@@ -1457,6 +1487,7 @@ class MainActivity : Activity() {
         renderizarMovimentacoes()
         renderizarProximosVencimentos()
         atualizarResumoOrcamentoHome()
+        atualizarPlanejamento()
     }
 
     private fun atualizarResumo() {
@@ -1664,6 +1695,373 @@ class MainActivity : Activity() {
         homeBudgetProgressText.text = "$percentual% utilizado"
     }
 
+    private fun atualizarPlanejamento() {
+        val entradas = movimentacoes
+            .filter { it.tipo == TipoMovimentacao.GANHO }
+            .sumOf { it.valorCentavos }
+        val saidas = movimentacoes
+            .filter { it.tipo == TipoMovimentacao.GASTO }
+            .sumOf { it.valorCentavos }
+        val resultado = entradas - saidas
+
+        planningMonthNetText.text = formatarMoeda(resultado)
+        planningMonthNetText.setTextColor(
+            getColor(
+                when {
+                    resultado > 0 -> R.color.income
+                    resultado < 0 -> R.color.expense
+                    else -> R.color.white
+                }
+            )
+        )
+        planningIncomeExpectedText.text = formatarMoeda(entradas)
+        planningExpenseExpectedText.text = formatarMoeda(saidas)
+
+        renderizarMesesPlanejamento()
+        renderizarCompromissosPlanejamento()
+        atualizarResumoPlanejamentoAtivo()
+    }
+
+    private fun renderizarMesesPlanejamento() {
+        planningMonthsContainer.removeAllViews()
+
+        repeat(3) { offset ->
+            val mes = mesSelecionado.plusMonths(offset.toLong())
+
+            val itens = try {
+                database.garantirRecorrenciasParaMes(mes)
+                database.listarPorMes(mes)
+            } catch (erro: SQLiteException) {
+                emptyList()
+            }
+
+            val entradas = itens
+                .filter { it.tipo == TipoMovimentacao.GANHO }
+                .sumOf { it.valorCentavos }
+            val saidas = itens
+                .filter { it.tipo == TipoMovimentacao.GASTO }
+                .sumOf { it.valorCentavos }
+            val resultado = entradas - saidas
+            val selecionado = offset == 0
+
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                minimumWidth = dp(148)
+                setPadding(dp(14), dp(13), dp(14), dp(13))
+                setBackgroundResource(
+                    if (selecionado) {
+                        R.drawable.vira_month_card_active
+                    } else {
+                        R.drawable.vira_month_card
+                    }
+                )
+                isClickable = true
+                isFocusable = true
+            }
+
+            val mesLabel = TextView(this).apply {
+                val formato = DateTimeFormatter.ofPattern(
+                    "MMM",
+                    localeBrasil
+                )
+                text = mes.atDay(1)
+                    .format(formato)
+                    .replaceFirstChar { it.uppercase(localeBrasil) }
+                textSize = 12f
+                setTypeface(
+                    typeface,
+                    android.graphics.Typeface.BOLD
+                )
+                setTextColor(
+                    getColor(
+                        if (selecionado) {
+                            R.color.white
+                        } else {
+                            R.color.text_secondary
+                        }
+                    )
+                )
+            }
+
+            val resultadoText = TextView(this).apply {
+                text = formatarMoeda(resultado)
+                textSize = 17f
+                setTypeface(
+                    typeface,
+                    android.graphics.Typeface.BOLD
+                )
+                setTextColor(
+                    getColor(
+                        when {
+                            selecionado -> R.color.white
+                            resultado >= 0 -> R.color.income
+                            else -> R.color.expense
+                        }
+                    )
+                )
+            }
+
+            val detalhe = TextView(this).apply {
+                text = formatarMoeda(saidas) + " em saídas"
+                textSize = 10f
+                setTextColor(
+                    getColor(
+                        if (selecionado) {
+                            R.color.brand_soft
+                        } else {
+                            R.color.text_secondary
+                        }
+                    )
+                )
+            }
+
+            card.addView(mesLabel)
+            card.addView(
+                resultadoText,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dp(7)
+                }
+            )
+            card.addView(
+                detalhe,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dp(3)
+                }
+            )
+
+            card.setOnClickListener {
+                if (mes != mesSelecionado) {
+                    mesSelecionado = mes
+                    recarregarInterface()
+                }
+            }
+
+            planningMonthsContainer.addView(
+                card,
+                LinearLayout.LayoutParams(
+                    dp(148),
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            )
+
+            if (offset < 2) {
+                planningMonthsContainer.addView(
+                    Space(this),
+                    LinearLayout.LayoutParams(
+                        dp(10),
+                        dp(1)
+                    )
+                )
+            }
+        }
+    }
+
+    private fun renderizarCompromissosPlanejamento() {
+        planningCommitmentsContainer.removeAllViews()
+
+        val pendentes = movimentacoes
+            .filter { it.status == StatusMovimentacao.PENDENTE }
+            .sortedBy { it.data }
+            .take(6)
+
+        planningCommitmentsEmpty.visibility =
+            if (pendentes.isEmpty()) View.VISIBLE else View.GONE
+
+        val formatter = DateTimeFormatter.ofPattern(
+            "dd/MM",
+            localeBrasil
+        )
+
+        pendentes.forEachIndexed { index, movimentacao ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                minimumHeight = dp(62)
+                setPadding(0, dp(10), 0, dp(10))
+                isClickable = true
+                isFocusable = true
+            }
+
+            val indicador = View(this).apply {
+                setBackgroundResource(
+                    if (movimentacao.tipo == TipoMovimentacao.GASTO) {
+                        R.drawable.vira_dot_expense
+                    } else {
+                        R.drawable.vira_dot_income
+                    }
+                )
+            }
+            row.addView(
+                indicador,
+                LinearLayout.LayoutParams(dp(10), dp(10)).apply {
+                    marginEnd = dp(12)
+                }
+            )
+
+            val textos = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+
+            textos.addView(
+                TextView(this).apply {
+                    text = movimentacao.descricao
+                    textSize = 13f
+                    setTypeface(
+                        typeface,
+                        android.graphics.Typeface.BOLD
+                    )
+                    setTextColor(getColor(R.color.text_primary))
+                }
+            )
+
+            val contexto = when {
+                movimentacao.parcelaNumero != null &&
+                    movimentacao.parcelasTotal != null ->
+                    "Parcela " +
+                        movimentacao.parcelaNumero +
+                        "/" +
+                        movimentacao.parcelasTotal
+                movimentacao.recorrenciaId != null ->
+                    "Fixo mensal"
+                else ->
+                    movimentacao.categoria
+            }
+
+            textos.addView(
+                TextView(this).apply {
+                    text = contexto + " • " +
+                        movimentacao.data.format(formatter)
+                    textSize = 11f
+                    setTextColor(getColor(R.color.text_secondary))
+                }
+            )
+
+            row.addView(
+                textos,
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            )
+
+            row.addView(
+                TextView(this).apply {
+                    val sinal =
+                        if (movimentacao.tipo == TipoMovimentacao.GASTO) {
+                            "-"
+                        } else {
+                            "+"
+                        }
+                    text = sinal + " " +
+                        formatarMoeda(movimentacao.valorCentavos)
+                    textSize = 13f
+                    setTypeface(
+                        typeface,
+                        android.graphics.Typeface.BOLD
+                    )
+                    setTextColor(
+                        getColor(
+                            if (
+                                movimentacao.tipo ==
+                                TipoMovimentacao.GASTO
+                            ) {
+                                R.color.expense
+                            } else {
+                                R.color.income
+                            }
+                        )
+                    )
+                }
+            )
+
+            row.setOnClickListener {
+                abrirEditor(movimentacao)
+            }
+
+            planningCommitmentsContainer.addView(row)
+
+            if (index < pendentes.lastIndex) {
+                planningCommitmentsContainer.addView(
+                    View(this).apply {
+                        setBackgroundColor(getColor(R.color.border))
+                    },
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(1)
+                    ).apply {
+                        marginStart = dp(22)
+                    }
+                )
+            }
+        }
+    }
+
+    private fun atualizarResumoPlanejamentoAtivo() {
+        val recorrencias = try {
+            database.listarRecorrenciasAtivas()
+        } catch (erro: SQLiteException) {
+            emptyList()
+        }
+
+        val fixosGastos = recorrencias
+            .filter { it.tipo == TipoMovimentacao.GASTO }
+            .sumOf { it.valorCentavos }
+        val fixosGanhos = recorrencias
+            .filter { it.tipo == TipoMovimentacao.GANHO }
+            .sumOf { it.valorCentavos }
+
+        planningRecurringCountText.text =
+            when (recorrencias.size) {
+                0 -> "Nenhum fixo ativo"
+                1 -> "1 fixo ativo"
+                else -> recorrencias.size.toString() + " fixos ativos"
+            }
+
+        planningRecurringValueText.text =
+            if (recorrencias.isEmpty()) {
+                "Crie gastos ou ganhos que se repetem todo mês."
+            } else {
+                formatarMoeda(fixosGastos) + " saídas • " +
+                    formatarMoeda(fixosGanhos) + " entradas"
+            }
+
+        val parcelas = try {
+            database.listarParcelasPendentesAPartirDe(mesSelecionado)
+        } catch (erro: SQLiteException) {
+            emptyList()
+        }
+
+        val compras = parcelas
+            .mapNotNull { it.parcelamentoId }
+            .distinct()
+            .size
+        val totalParcelas = parcelas.size
+        val valorRestante = parcelas.sumOf { it.valorCentavos }
+
+        planningInstallmentCountText.text =
+            when (compras) {
+                0 -> "Nenhum parcelamento ativo"
+                1 -> "1 compra parcelada"
+                else -> compras.toString() + " compras parceladas"
+            }
+
+        planningInstallmentValueText.text =
+            if (parcelas.isEmpty()) {
+                "Quando parcelar um gasto, o restante aparece aqui."
+            } else {
+                totalParcelas.toString() + " parcelas • " +
+                    formatarMoeda(valorRestante) +
+                    " ainda previsto"
+            }
+    }
+
     private fun atualizarResumoCategorias() {
         val gastosPorCategoria = movimentacoes
             .filter { it.tipo == TipoMovimentacao.GASTO }
@@ -1676,11 +2074,13 @@ class MainActivity : Activity() {
             emptyMap()
         }
 
-        val categoriasExibidas = (
+        val todasCategoriasExibidas = (
             gastosPorCategoria.keys + orcamentos.keys
         )
             .distinct()
             .sortedByDescending { gastosPorCategoria[it] ?: 0L }
+
+        val categoriasExibidas = todasCategoriasExibidas.take(4)
 
         categoryChartContainer.removeAllViews()
 
@@ -1816,6 +2216,25 @@ class MainActivity : Activity() {
             }
 
             categoryChartContainer.addView(bloco)
+        }
+
+        val restantes =
+            todasCategoriasExibidas.size - categoriasExibidas.size
+
+        if (restantes > 0) {
+            categoryChartContainer.addView(
+                TextView(this).apply {
+                    text = "+ " + restantes +
+                        " categorias no gerenciador"
+                    textSize = 12f
+                    setTextColor(getColor(R.color.brand_secondary))
+                    setTypeface(
+                        typeface,
+                        android.graphics.Typeface.BOLD
+                    )
+                    setPadding(0, dp(4), 0, 0)
+                }
+            )
         }
     }
 

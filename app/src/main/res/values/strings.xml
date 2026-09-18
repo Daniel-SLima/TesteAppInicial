@@ -92,4 +92,13 @@
     <string name="edit_movement_title">Editar lançamento</string>
     <string name="delete_movement">Excluir lançamento</string>
     <string name="movement_saved">Lançamento salvo</string>
+    <string name="planning_month_result">RESULTADO PREVISTO DO MÊS</string>
+    <string name="planning_income">Entradas do mês</string>
+    <string name="planning_expense">Saídas do mês</string>
+    <string name="planning_next_months">Próximos meses</string>
+    <string name="planning_next_months_hint">Toque em um mês para mudar toda a visão do Vira.</string>
+    <string name="planning_commitments">Compromissos do mês</string>
+    <string name="planning_no_commitments">Nenhum pagamento ou recebimento pendente neste mês.</string>
+    <string name="planning_in_progress">Em andamento</string>
+    <string name="planning_budget_hint">Mostramos aqui as categorias com maior impacto. Os limites completos ficam em Orçamentos.</string>
 </resources>

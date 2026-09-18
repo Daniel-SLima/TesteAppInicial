@@ -486,6 +486,23 @@ class MovimentacaoDatabase(context: Context) : SQLiteOpenHelper(
         }
     }
 
+    fun listarParcelasPendentesAPartirDe(
+        mes: YearMonth
+    ): List<Movimentacao> {
+        val inicio = mes.atDay(1).atStartOfDay()
+
+        return consultar(
+            selection =
+                "$COLUNA_PARCELAMENTO_ID IS NOT NULL " +
+                    "AND $COLUNA_STATUS = ? " +
+                    "AND $COLUNA_DATA >= ?",
+            selectionArgs = arrayOf(
+                StatusMovimentacao.PENDENTE.name,
+                inicio.toString()
+            )
+        )
+    }
+
     fun listarPorMes(mes: YearMonth): List<Movimentacao> {
         val inicio = mes.atDay(1).atStartOfDay()
         val fimExclusivo = mes.plusMonths(1).atDay(1).atStartOfDay()

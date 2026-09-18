@@ -660,17 +660,311 @@
                 android:paddingEnd="18dp"
                 android:paddingBottom="30dp">
 
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/planning_title" android:textColor="@color/text_primary" android:textSize="28sp" android:textStyle="bold" />
-                <TextView android:id="@+id/planningMonthText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/text_secondary" android:textSize="13sp" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="@string/planning_subtitle" android:textColor="@color/text_secondary" android:textSize="12sp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/planning_title"
+                    android:textColor="@color/text_primary"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/planning_subtitle"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/planningPreviousMonthButton"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="@drawable/vira_button_secondary"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:text="‹"
+                        android:textColor="@color/text_primary"
+                        android:textSize="23sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/planningMonthText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:textColor="@color/text_primary"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/planningNextMonthButton"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="@drawable/vira_button_secondary"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:text="›"
+                        android:textColor="@color/text_primary"
+                        android:textSize="23sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/vira_planning_hero"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/planning_month_result"
+                        android:textColor="#CFE3DD"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/planningMonthNetText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="R$ 0,00"
+                        android:textColor="@color/white"
+                        android:textSize="31sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/planning_income"
+                                android:textColor="#CFE3DD"
+                                android:textSize="11sp" />
+
+                            <TextView
+                                android:id="@+id/planningIncomeExpectedText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:text="R$ 0,00"
+                                android:textColor="@color/white"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="end"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/planning_expense"
+                                android:textColor="#CFE3DD"
+                                android:textSize="11sp" />
+
+                            <TextView
+                                android:id="@+id/planningExpenseExpectedText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:text="R$ 0,00"
+                                android:textColor="@color/white"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:text="@string/planning_next_months"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/planning_next_months_hint"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:overScrollMode="never"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/planningMonthsContainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/planning_commitments"
+                    android:textColor="@color/text_primary"
+                    android:textSize="19sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/vira_card_surface"
+                    android:orientation="vertical"
+                    android:paddingStart="16dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="4dp">
+
+                    <TextView
+                        android:id="@+id/planningCommitmentsEmpty"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:paddingTop="24dp"
+                        android:paddingBottom="24dp"
+                        android:text="@string/planning_no_commitments"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:visibility="gone" />
+
+                    <LinearLayout
+                        android:id="@+id/planningCommitmentsContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/planning_in_progress"
+                    android:textColor="@color/text_primary"
+                    android:textSize="19sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/vira_card_surface"
+                        android:orientation="vertical"
+                        android:padding="15dp">
+
+                        <ImageView
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:contentDescription="@string/manage_recurring_short"
+                            android:src="@drawable/ic_vira_repeat"
+                            android:tint="@color/brand_secondary" />
+
+                        <TextView
+                            android:id="@+id/planningRecurringCountText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/planningRecurringValueText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <Space
+                        android:layout_width="10dp"
+                        android:layout_height="1dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/vira_card_surface"
+                        android:orientation="vertical"
+                        android:padding="15dp">
+
+                        <ImageView
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:contentDescription="@string/installment_purchase"
+                            android:src="@drawable/ic_vira_installments"
+                            android:tint="@color/brand_secondary" />
+
+                        <TextView
+                            android:id="@+id/planningInstallmentCountText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/planningInstallmentValueText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
                     android:text="@string/planning_tools"
                     android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:textStyle="bold" />
 
                 <LinearLayout
@@ -682,14 +976,13 @@
                     <Button
                         android:id="@+id/manageRecurringButton"
                         android:layout_width="0dp"
-                        android:layout_height="68dp"
+                        android:layout_height="58dp"
                         android:layout_weight="1"
                         android:background="@drawable/vira_button_secondary"
-                        android:gravity="center"
                         android:text="@string/manage_recurring_short"
                         android:textAllCaps="false"
                         android:textColor="@color/text_primary"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
 
                     <Space
@@ -699,34 +992,40 @@
                     <Button
                         android:id="@+id/manageBudgetsButton"
                         android:layout_width="0dp"
-                        android:layout_height="68dp"
+                        android:layout_height="58dp"
                         android:layout_weight="1"
                         android:background="@drawable/vira_button_secondary"
-                        android:gravity="center"
                         android:text="@string/manage_budgets_short"
                         android:textAllCaps="false"
                         android:textColor="@color/text_primary"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
                 <LinearLayout
+                    android:id="@+id/planningBudgetCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
+                    android:layout_marginTop="20dp"
                     android:background="@drawable/vira_card_surface"
                     android:orientation="vertical"
                     android:padding="18dp">
 
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/category_summary" android:textColor="@color/text_primary" android:textSize="19sp" android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/category_summary"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/categorySummaryText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:textColor="@color/text_primary"
-                        android:textSize="15sp"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
                         android:textStyle="bold" />
 
                     <LinearLayout
@@ -736,9 +1035,14 @@
                         android:layout_marginTop="14dp"
                         android:orientation="vertical" />
 
-                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/category_summary_hint" android:textColor="@color/text_secondary" android:textSize="12sp" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/planning_budget_hint"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
                 </LinearLayout>
-
             </LinearLayout>
         </ScrollView>
 
@@ -859,7 +1163,7 @@
 
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/brand_public_name" android:textColor="@color/text_primary" android:textSize="16sp" android:textStyle="bold" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/brand_tagline" android:textColor="@color/text_secondary" android:textSize="12sp" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="1.0.0 Alpha 03" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="1.0.0 Alpha 04" android:textColor="@color/text_secondary" android:textSize="11sp" />
                 </LinearLayout>
             </LinearLayout>
         </ScrollView>
